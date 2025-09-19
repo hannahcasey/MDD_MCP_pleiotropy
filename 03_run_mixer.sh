@@ -16,12 +16,22 @@ MIXER_REFERENCE_FOLDER=$DIR/mixer
 MIXER_SIF=$DIR/mixer.sif
 cd $DIR/../resources/MIXER/
 
-mkdir -p /exports/eddie/scratch/s2093301/tmp/{apptainer_cache,apptainer_tmp}
-export APPTAINER_CACHEDIR=/exports/eddie/scratch/s2093301/tmp/apptainer_cache
-export APPTAINER_TMPDIR=/exports/eddie/scratch/s2093301/tmp/apptainer_tmp
-export SINGULARITY_CACHEDIR="$APPTAINER_CACHEDIR"
-export SINGULARITY_TMPDIR="$APPTAINER_TMPDIR"
-export TMPDIR=/exports/eddie/scratch/s2093301/tmp
+SCR_TMP=/exports/eddie/scratch/$USER/tmp
+mkdir -p "$SCR_TMP"/{apptainer_cache,apptainer_tmp}
+export APPTAINER_CACHEDIR="$SCR_TMP/apptainer_cache"
+export APPTAINER_TMPDIR="$SCR_TMP/apptainer_tmp"
+export APPTAINERENV_TMPDIR="$SCR_TMP"
+export APPTAINER_ENABLE_OVERLAY=no
+export APPTAINER_NO_MOUNT=tmp
+export SINGULARITY_CACHEDIR="$SCR_TMP/apptainer_cache"
+export SINGULARITY_TMPDIR="$SCR_TMP/apptainer_tmp"
+export SINGULARITY_WORKDIR="$SCR_TMP"
+export SINGULARITY_NO_MOUNT=tmp
+export TMPDIR="$SCR_TMP"
+
+export OMP_NUM_THREADS=16
+export MKL_NUM_THREADS=16
+export OPENBLAS_NUM_THREADS=16
 
 export SINGULARITY_BIND=${MIXER_REFERENCE_FOLDER}/reference:/REF
 export MIXER_SIF=$DIR/mixer.sif
@@ -33,12 +43,5 @@ export EXTRACT="--extract /REF/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.prune_ma
 export PYTHON="singularity exec --home $PWD:/home $MIXER_SIF python"
 export MIXER_PY="$PYTHON /tools/mixer/precimed/mixer.py"
 
-
-$MIXER_PY fit1 $MIXER_COMMON_ARGS $EXTRACT --trait1-file MDD_MiXeR.sumstats.gz --out MDD.fit.$REP
-$MIXER_PY fit1 $MIXER_COMMON_ARGS $EXTRACT --trait1-file MCP_MiXeR.sumstats.gz --out MCP.fit.$REP
-$MIXER_PY fit2 $MIXER_COMMON_ARGS $EXTRACT --trait1-file MDD_MiXeR.sumstats.gz --trait2-file MCP_MiXeR.sumstats.gz --trait1-params MDD.fit.$REP.json --trait2-params MCP.fit.$REP.json --out MDD_vs_MCP.fit.$REP
-
-$MIXER_PY test1 $MIXER_COMMON_ARGS --trait1-file MDD_MiXeR.sumstats.gz --load-params MDD.fit.$REP.json --out MDD.test.$REP
-$MIXER_PY test1 $MIXER_COMMON_ARGS --trait1-file MCP_MiXeR.sumstats.gz --load-params MCP.fit.$REP.json --out MCP.test.$REP
 $MIXER_PY test2 $MIXER_COMMON_ARGS --trait1-file MDD_MiXeR.sumstats.gz --trait2-file MCP_MiXeR.sumstats.gz --load-params MDD_vs_MCP.fit.$REP.json --out MDD_vs_MCP.test.$REP
 
