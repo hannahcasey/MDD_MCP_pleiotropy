@@ -34,7 +34,7 @@ setDT(MCP_minimal)
 MCP_minimal <- MCP_minimal[!(CHR == 6 & BP >= 25e6 & BP <= 35e6)]
 MCP_minimal <- MCP_minimal[!(CHR == 8 & BP >= 7.2e6 & BP <= 12.5e6)]
 
-# conjFDR ----
+# conjFDR ---- 
 
 #download.file("https://zenodo.org/record/5750318/files/genref.zip",
 #             destfile = "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/conjFDR/genref.zip", mode = "wb")
