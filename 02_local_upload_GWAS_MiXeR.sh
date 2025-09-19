@@ -1,0 +1,2 @@
+scp -r /Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/MCP_MiXeR.sumstats.gz s2093301@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/s2093301/coloc/resources/MIXER/
+scp -r /Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/MDD_MiXeR.sumstats.gz s2093301@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/s2093301/coloc/resources/MIXER/
