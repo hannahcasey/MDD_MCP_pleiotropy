@@ -148,7 +148,7 @@ lead_merged <- lead %>%
   slice_min(conj_fdr, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
   select(SNP, CHR, BP, conj_fdr)
-
+ 
 MDD_MCP_res %>%
   filter(SNP %in% lead_merged$SNP) %>%
   mutate(consistent = sign(BETA1) == sign(BETA2)) %>%
