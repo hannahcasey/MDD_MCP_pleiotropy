@@ -43,5 +43,47 @@ export EXTRACT="--extract /REF/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.prune_ma
 export PYTHON="singularity exec --home $PWD:/home $MIXER_SIF python"
 export MIXER_PY="$PYTHON /tools/mixer/precimed/mixer.py"
 
+$MIXER_PY fit1 $MIXER_COMMON_ARGS $EXTRACT --trait1-file MDD_MiXeR.sumstats.gz --out MDD.fit.$REP
+$MIXER_PY fit1 $MIXER_COMMON_ARGS $EXTRACT --trait1-file MCP_MiXeR.sumstats.gz --out MCP.fit.$REP
+$MIXER_PY fit2 $MIXER_COMMON_ARGS $EXTRACT --trait1-file MDD_MiXeR.sumstats.gz --trait2-file MCP_MiXeR.sumstats.gz --trait1-params MDD.fit.$REP.json --trait2-params MCP.fit.$REP.json --out MDD_vs_MCP.fit.$REP
+
+$MIXER_PY test1 $MIXER_COMMON_ARGS --trait1-file MDD_MiXeR.sumstats.gz --load-params MDD.fit.$REP.json --out MDD.test.$REP
+$MIXER_PY test1 $MIXER_COMMON_ARGS --trait1-file MCP_MiXeR.sumstats.gz --load-params MCP.fit.$REP.json --out MCP.test.$REP
 $MIXER_PY test2 $MIXER_COMMON_ARGS --trait1-file MDD_MiXeR.sumstats.gz --trait2-file MCP_MiXeR.sumstats.gz --load-params MDD_vs_MCP.fit.$REP.json --out MDD_vs_MCP.test.$REP
 
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py combine --json MDD.fit.@.json --out MDD.fit
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py combine --json MDD.test.@.json --out MDD.test
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py combine --json MCP.fit.@.json --out MCP.fit
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py combine --json MCP.test.@.json --out MCP.test
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py combine --json MDD_vs_MCP.fit.@.json --out MDD_vs_MCP.fit
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py combine --json MDD_vs_MCP.test.@.json --out MDD_vs_MCP.test
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py one \
+#   --json MDD.fit.json MCP.fit.json \
+#   --out MDD_and_MCP.fit --trait1 MDD MCP --statistic mean std --ext svg
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py one \
+#   --json MDD.test.json MCP.test.json \
+#   --out MDD_and_MCP.test --trait1 MDD MCP --statistic mean std --ext svg
+
+# singularity exec --home "$PWD:/home" "$MIXER_SIF" \
+#   python /tools/mixer/precimed/mixer_figures.py two \
+#   --json-fit MDD_vs_MCP.fit.json \
+#   --json-test MDD_vs_MCP.test.json \
+#   --out MDD_vs_MCP \
+#   --trait1 MDD --trait2 MCP \
+#   --statistic mean std --ext svg
