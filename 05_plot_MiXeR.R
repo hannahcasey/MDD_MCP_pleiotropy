@@ -17,9 +17,9 @@ MDD_vs_MCP <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocali
 MDD_and_MCP_plot <- MDD_and_MCP %>%
   mutate(
     trait = c("Major Depressive Disorder", "Multisite Chronic Pain"),
-    poly = `pi..mean.`,
-    poly_low = pmax(0, `pi..mean.` - `pi..std.`),
-    poly_high =       `pi..mean.` + `pi..std.`,
+    poly = `nc.p9..mean.`,
+    poly_low = pmax(0, `nc.p9..mean.` - `nc.p9..std.`),
+    poly_high =       `nc.p9..mean.` + `nc.p9..std.`,
     disc = `sig2_beta..mean.`,
     disc_low = pmax(1e-12, `sig2_beta..mean.` - `sig2_beta..std.`),
     disc_high =           `sig2_beta..mean.` + `sig2_beta..std.`,
@@ -54,7 +54,7 @@ dot_panel <- function(data, x, xmin, xmax, xlab, log10_x = FALSE) {
 }
 
 p_h2   <- dot_panel(MDD_and_MCP_plot, "h2",  "h2_low",  "h2_high",  "Heritability (h²)")
-p_poly <- dot_panel(MDD_and_MCP_plot, "poly","poly_low","poly_high","Polygenicity (π)")
+p_poly <- dot_panel(MDD_and_MCP_plot, "poly","poly_low","poly_high","Polygenicity (nc@p9)")
 p_disc <- dot_panel(MDD_and_MCP_plot, "disc","disc_low","disc_high",
                     expression(Discoverability~(sigma[beta]^2)), log10_x = F)
 
@@ -94,13 +94,13 @@ gg_cols <- scales::hue_pal()(2)
 
 venn_diagram <- plot(
   fit,
-  fills      = list(fill = gg_cols, alpha = 0.35),
-  edges      = list(col = "black", lwd = 1),
-  labels     = list(labels = c(lab1, lab2), col = "black", font = 1, cex = 1.0),
+  fills      = list(fill = gg_cols, alpha = 0.6),
+  edges      = list(col = "white", lwd = 1),
+  labels     = list(labels = c(lab1, lab2), col = "black", font = 1, cex = 1.3),
   quantities = list(
     # supply custom text labels in region order: MDD, MCP, overlap
     labels = c(MDD_n_var, MCP_n_var, overlap_n_var),
-    cex    = 0.8,
+    cex    = 1.1,
     font   = 1,
     col    = "black"
   )
@@ -115,7 +115,7 @@ df_rg <- tibble(
 )
 
 p_rg <- ggplot(df_rg, aes(y = " ", x = mean)) +
-  geom_col(width = 0.45, fill = "#7CAE00", color = "black") +
+  geom_col(width = 0.45, fill = "#92ea8b") +
   geom_errorbarh(aes(xmin = xmin, xmax = xmax), height = 0.18, linewidth = 0.8) +
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 0.4) +
   scale_x_continuous(limits = c(-1, 1), breaks = seq(-1, 1, 0.2)) +
@@ -137,7 +137,7 @@ df_conc <- tibble(
 )
 
 p_conc <- ggplot(df_conc, aes(y = " ", x = mean)) +
-  geom_col(width = 0.45, fill = "#7CAE00", color = "black") +
+  geom_col(width = 0.45, fill = "#92ea8b") +
   geom_errorbarh(aes(xmin = xmin, xmax = xmax), height = 0.18, linewidth = 0.8) +
   geom_vline(xintercept = 0.5, linetype = "dotted", linewidth = 0.4) +
   scale_x_continuous(limits = c(0, 1), labels = percent_format(accuracy = 1)) +
