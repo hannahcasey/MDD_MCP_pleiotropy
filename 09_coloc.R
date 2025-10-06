@@ -12,7 +12,7 @@ kb_window <- 250
 
 # Load in data ----
 ## MDD ----
-file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/depression/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
+file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
 MDD_GWAS <- fread(file, sep = "\t")
 MDD_GWAS$EAF <- ((MDD_GWAS$FCAS * MDD_GWAS$NCAS) + (MDD_GWAS$FCON * MDD_GWAS$NCON)) / (MDD_GWAS$NCAS + MDD_GWAS$NCON)
 MDD_n <- 1639572
@@ -176,92 +176,99 @@ for(lead_idx in seq_len(nrow(FUMA_leads))){
     )
 }
 
-
-
 # Save outputs ----
 saveRDS(coloc_results, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cross_trait.rds")
 
+coloc_pub <- data.frame(
+  FUMA_lead      = character(),
+  coloc_method        = character(),
+  PP4           = numeric(),     # PP.H4.abf
+  MCP_CS_size   = integer(),
+  MDD_CS_size   = integer(),
+  MCP_CS_PIPsum = numeric(),
+  MDD_CS_PIPsum = numeric(),
+  top_MCP_snp   = character(),
+  top_MDD_snp   = character(),
+  SNP_PP4_top   = numeric(),   
+  MCP_CS_snps   = character(),
+  MDD_CS_snps   = character(),
+  stringsAsFactors = FALSE
+)
 
-
-
-
-
-
-
-
-
-## Summary results ----
-library(openxlsx)
-extract_df <- function(x) {
-  df <- tryCatch(x$coloc$summary, error = function(e) NULL)
-  if (is.null(df) || nrow(df) == 0) return(NULL)
+for(k in names(coloc_results)){
+  x <- coloc_results[[k]]
+  m <- x$coloc$method
   
-  # pull the method; collapse if it's a vector/list
-  meth <- tryCatch(x$coloc$method, error = function(e) NA_character_)
-  meth <- if (length(meth) > 1) paste(meth, collapse = ", ") else as.character(meth)
-  
-  df <- as.data.frame(df, check.names = FALSE)
-  # add as the first column
-  df <- cbind(coloc_method = rep(meth, nrow(df)), df)
-  df
+  if (m == "susie") {
+    ss <- x$coloc$summary
+    ss <- ss[ss$PP.H4.abf >= 0.8, , drop = FALSE]
+    if (nrow(ss) == 0) next
+    
+    for (i in seq_len(nrow(ss))) {
+      cs1 <- ss$idx1[i]; cs2 <- ss$idx2[i]
+      
+      cs1_idx <- x$fits$MCP$sets$cs[[cs1]]
+      cs2_idx <- x$fits$MDD$sets$cs[[cs2]]
+      l1 <- x$fits$MCP$sets$cs_index[cs1]
+      l2 <- x$fits$MDD$sets$cs_index[cs2]
+      
+      # rsID lists per CS
+      cs1_rs <- x$meta$snps[cs1_idx]
+      cs2_rs <- x$meta$snps[cs2_idx]
+      
+      # sizes and PIP sums
+      cs1_size <- length(cs1_idx)
+      cs2_size <- length(cs2_idx)
+      cs1_pipsum <- sum(x$fits$MCP$alpha[l1, cs1_idx], na.rm = TRUE)
+      cs2_pipsum <- sum(x$fits$MDD$alpha[l2, cs2_idx], na.rm = TRUE)
+      
+      # top SNP (max PIP) and its PIP
+      top1 <- cs1_idx[ which.max(x$fits$MCP$pip[cs1_idx]) ]
+      top2 <- cs2_idx[ which.max(x$fits$MDD$pip[cs2_idx]) ]
+      
+      coloc_pub <- rbind(coloc_pub, data.frame(
+        FUMA_lead      = k,
+        coloc_method        = m,
+        PP4           = ss$PP.H4.abf[i],
+        MCP_CS_size   = cs1_size,
+        MDD_CS_size   = cs2_size,
+        MCP_CS_PIPsum = cs1_pipsum,
+        MDD_CS_PIPsum = cs2_pipsum,
+        top_MCP_snp   = x$meta$snps[top1],
+        top_MDD_snp   = x$meta$snps[top2],
+        SNP_PP4_top   = NA, 
+        MCP_CS_snps   = paste(cs1_rs, collapse=";"),
+        MDD_CS_snps   = paste(cs2_rs, collapse=";"),
+        stringsAsFactors = FALSE
+      ))
+    }
+    
+  } else if (m == "abf") {
+    if (x$coloc$summary$PP.H4.abf >= 0.8) {
+      # top shared SNP under H4 = max SNP.PP.H4
+      ord <- order(-x$coloc$full$results$SNP.PP.H4)
+      top_shared <- x$coloc$full$results$snp[ord][1]
+      top_shared_pp4 <- x$coloc$full$results$SNP.PP.H4[ord][1]
+      
+      coloc_pub <- rbind(coloc_pub, data.frame(
+        FUMA_lead      = k,
+        coloc_method        = m,
+        PP4           = x$coloc$summary$PP.H4.abf,
+        MCP_CS_size   = NA_integer_,
+        MDD_CS_size   = NA_integer_,
+        MCP_CS_PIPsum = NA_real_,
+        MDD_CS_PIPsum = NA_real_,
+        top_MCP_snp   = top_shared,
+        top_MDD_snp   = top_shared,
+        SNP_PP4_top   = top_shared_pp4,
+        MCP_CS_snps   = NA,
+        MDD_CS_snps   = NA,
+        stringsAsFactors = FALSE
+      ))
+    }
+  }
 }
 
-## MDD ----
-outfile <- "~/Desktop/PhD/projects/CP_MDD_inflammation_MR/output/coloc/MDD_results_coloc_summary.xlsx"
-sheet   <- "summary"
-wb <- createWorkbook()
-addWorksheet(wb, sheet)
-
-title_style  <- createStyle(textDecoration = "bold", fgFill = "#EEECE1", halign = "left")
-header_style <- createStyle(textDecoration = "bold")
-
-row_ptr <- 1
-for (nm in names(MDD_results)) {
-  df <- extract_df(MDD_results[[nm]])
-  
-  writeData(wb, sheet, nm, startRow = row_ptr, startCol = 1, colNames = FALSE)
-  mergeCells(wb, sheet, cols = 1:ncol(df), rows = row_ptr)
-  addStyle(wb, sheet, style = title_style, rows = row_ptr, cols = 1, gridExpand = TRUE)
-  
-  # 2) The table (now includes coloc_method)
-  writeData(wb, sheet, df, startRow = row_ptr + 1, withFilter = FALSE)
-  addStyle(wb, sheet, style = header_style,
-           rows = row_ptr + 1, cols = 1:ncol(df), gridExpand = TRUE)
-  
-  # advance (+1 blank row)
-  row_ptr <- row_ptr + 1 + nrow(df) + 1
-}
-
-saveWorkbook(wb, outfile, overwrite = TRUE)
-
-## MCP ----
-outfile <- "~/Desktop/PhD/projects/CP_MDD_inflammation_MR/output/coloc/MCP_results_coloc_summary.xlsx"
-sheet   <- "summary"
-wb <- createWorkbook()
-addWorksheet(wb, sheet)
-
-title_style  <- createStyle(textDecoration = "bold", fgFill = "#EEECE1", halign = "left")
-header_style <- createStyle(textDecoration = "bold")
-
-row_ptr <- 1
-for (nm in names(MCP_results)) {
-  df <- extract_df(MCP_results[[nm]])
-  
-  writeData(wb, sheet, nm, startRow = row_ptr, startCol = 1, colNames = FALSE)
-  mergeCells(wb, sheet, cols = 1:ncol(df), rows = row_ptr)
-  addStyle(wb, sheet, style = title_style, rows = row_ptr, cols = 1, gridExpand = TRUE)
-  
-  # 2) The table (now includes coloc_method)
-  writeData(wb, sheet, df, startRow = row_ptr + 1, withFilter = FALSE)
-  addStyle(wb, sheet, style = header_style,
-           rows = row_ptr + 1, cols = 1:ncol(df), gridExpand = TRUE)
-  
-  # advance (+1 blank row)
-  row_ptr <- row_ptr + 1 + nrow(df) + 1
-}
-
-saveWorkbook(wb, outfile, overwrite = TRUE)
-
-
-
+coloc_pub <- coloc_pub[!duplicated(coloc_pub[, c("top_MCP_snp","top_MDD_snp")]), ]
+write.csv(coloc_pub, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs.csv", row.names = F)
 

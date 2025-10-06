@@ -19,6 +19,6 @@ python sumstats.py clump \
   --plink "$PLINK" \
   --sumstats conjFDR_for_clump.csv \
   --bfile-chr "$REFCHR" \
-  --clump-p1 0.01 \
+  --clump-p1 0.05 \
   --out /Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump \
   --force
