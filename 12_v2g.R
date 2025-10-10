@@ -5,9 +5,11 @@ library(purrr)
 library(tibble)
 library(stringr)
 library(data.table)
+library(biomaRt)
+library(tidyr)
 
 # Load credible sets ----
-cs <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs.csv", header = T)
+cs <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", header = T)
 
 .ot_run_list <- function(query, variables = list()) {
   con <- ghql::GraphqlClient$new("https://api.platform.opentargets.org/api/v4/graphql")
@@ -78,7 +80,7 @@ V2G_long <- left_join(variant_ids, v2g_scores, by = c("chr" = "chr_id", "pos" = 
 
 V2G_long <- V2G_long %>%
   rename(V2G_score = overall_score) %>%
-  select(rsid, variantId, gene_id, V2G_score)
+  dplyr::select(rsid, variantId, gene_id, V2G_score)
 
 # Format credible sets ----
 key_tbl_all <- V2G_long %>%
@@ -91,6 +93,9 @@ split_rs <- function(x) {
   if (is.na(x) || !nzchar(x)) character(0)
   else str_split(x, ";", simplify = FALSE)[[1]] |> str_trim() |> discard(~ .x == "")
 }
+
+clump.lead <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.lead.csv", header = T)
+clump.lead <- dplyr::select(clump.lead, CHR, LEAD_SNP, LEAD_BP) 
 
 cs_annot <- cs %>%
   mutate(
@@ -108,9 +113,40 @@ cs_annot <- cs %>%
     }),
     v2g_genes = as.character(v2g_genes)
   ) %>%
-  select(-c("MCP_rs", "MDD_rs", "all_rs")) %>%
+  left_join(clump.lead, by = c("Lead_SNP" = "LEAD_SNP")) %>%
+  rename(chr = CHR, pos = LEAD_BP) %>%
+  dplyr::select(Lead_SNP, chr, pos, coloc_method, PP4, MCP_CS_size, MDD_CS_size,
+         top_MCP_snp, top_MDD_snp, v2g_genes) %>%
   arrange(coloc_method)
+
+## Get gene names ----
+gene_list_long <- V2G_long$gene_id
+mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", GRCh = 37)
+gene_coords <- getBM(
+  attributes = c("ensembl_gene_id", "hgnc_symbol"),
+  filters = "ensembl_gene_id",
+  values = gene_list_long,
+  mart = mart
+)
+
+V2G_long <- left_join(V2G_long, gene_coords, by = c("gene_id" = "ensembl_gene_id"))
+
+cs_annot <- cs_annot %>%
+  mutate(row_id = dplyr::row_number(),
+         v2g_genes = na_if(v2g_genes, "")) %>%
+  separate_rows(v2g_genes, sep = ";") %>%      # splits "A;B"
+  mutate(v2g_genes_clean = sub("\\.\\d+$", "", v2g_genes)) %>%    # drop .version
+  left_join(gene_coords, by = c("v2g_genes_clean" = "ensembl_gene_id")) %>%
+  group_by(row_id) %>%
+  summarise(
+    across(c(Lead_SNP, chr, pos, coloc_method, PP4, top_MCP_snp, top_MDD_snp), dplyr::first),
+    v2g_genes   = paste(unique(na.omit(v2g_genes)), collapse = ";"),
+    v2g_symbols = paste(unique(na.omit(hgnc_symbol)), collapse = ";"),
+    .groups = "drop"
+  ) %>%
+  dplyr::select(-row_id) %>%
+  arrange(chr, pos)
 
 # Save outputs ----
 write.csv(V2G_long, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/v2g_long.csv", row.names = FALSE)
-write.csv(cs_annot, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_with_v2g_genes.csv", row.names = FALSE)
+write.csv(cs_annot, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait_in_text.csv", row.names = FALSE)

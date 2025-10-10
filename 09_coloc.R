@@ -1,14 +1,7 @@
 library(data.table)
 library(susieR)
 library(coloc)
-library(LDlinkR)
 library(dplyr)
-
-# Inputs ----
-LDLINK_TOKEN <- "448bee827178"
-ld_pop <- "EUR"                        
-build <- "grch37"
-kb_window <- 250
 
 # Load in data ----
 ## MDD ----
@@ -79,8 +72,6 @@ for(lead_idx in seq_len(nrow(FUMA_leads))){
   R    <- as.matrix(fread(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc/", SNP_rsid, ".ld.gz"), header = FALSE))
   snps <- readLines(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc/", SNP_rsid, ".snplist"))
   rownames(R) <- colnames(R) <- snps
-  # R <- (R + t(R))/2
-  # diag(R) <- 1
 
   BIM_sub <- BIM[match(snps, BIM$V2), .(SNP = V2, REF = V6, ALT = V5)]
 
@@ -88,7 +79,7 @@ for(lead_idx in seq_len(nrow(FUMA_leads))){
   m_mdd  <- MDD_GWAS[match(snps, MDD_GWAS$ID),  .(SNP = ID, A1 = EA, BETA, SE, EAF, P = PVAL, INFO = IMPINFO)]
   
   
-  ### flip allele ----
+  ## flip allele ----
   flip_mcp <- fifelse(m_mcp$A1 == BIM_sub$ALT, -1,
                       fifelse(m_mcp$A1 == BIM_sub$REF,  1, NA_real_))
   flip_mdd <- fifelse(m_mdd$A1 == BIM_sub$ALT, -1,
@@ -179,96 +170,88 @@ for(lead_idx in seq_len(nrow(FUMA_leads))){
 # Save outputs ----
 saveRDS(coloc_results, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cross_trait.rds")
 
-coloc_pub <- data.frame(
-  FUMA_lead      = character(),
-  coloc_method        = character(),
-  PP4           = numeric(),     # PP.H4.abf
-  MCP_CS_size   = integer(),
-  MDD_CS_size   = integer(),
-  MCP_CS_PIPsum = numeric(),
-  MDD_CS_PIPsum = numeric(),
-  top_MCP_snp   = character(),
-  top_MDD_snp   = character(),
-  SNP_PP4_top   = numeric(),   
-  MCP_CS_snps   = character(),
-  MDD_CS_snps   = character(),
-  stringsAsFactors = FALSE
-)
+# Format results ----
+pph4_from_summary <- function(s) {
+  if (is.null(s)) return(NA_real_)
+  if (is.data.frame(s) && "PP.H4.abf" %in% names(s)) return(as.numeric(s$PP.H4.abf[1]))
+  if (is.atomic(s) && !is.list(s) && !is.null(names(s)) && "PP.H4.abf" %in% names(s)) return(as.numeric(s[["PP.H4.abf"]]))
+  if (is.data.frame(s) && "PP.H4.abf" %in% rownames(s)) return(as.numeric(s["PP.H4.abf", 1]))
+  NA_real_
+}
 
-for(k in names(coloc_results)){
+out <- vector("list", 0L)
+
+for (k in names(coloc_results)) {
   x <- coloc_results[[k]]
   m <- x$coloc$method
+
+  fit_MCP  <- x$fits$MCP
+  fit_MDD <- x$fits$MDD
   
   if (m == "susie") {
     ss <- x$coloc$summary
-    ss <- ss[ss$PP.H4.abf >= 0.8, , drop = FALSE]
-    if (nrow(ss) == 0) next
     
     for (i in seq_len(nrow(ss))) {
       cs1 <- ss$idx1[i]; cs2 <- ss$idx2[i]
+      cs1_idx <- fit_MCP$sets$cs[[paste0("L", cs1)]]
+      cs2_idx <- fit_MDD$sets$cs[[paste0("L", cs2)]]
       
-      cs1_idx <- x$fits$MCP$sets$cs[[cs1]]
-      cs2_idx <- x$fits$MDD$sets$cs[[cs2]]
-      l1 <- x$fits$MCP$sets$cs_index[cs1]
-      l2 <- x$fits$MDD$sets$cs_index[cs2]
+      top1 <- cs1_idx[ which.max(fit_MCP$pip[cs1_idx]) ]
+      top2 <- cs2_idx[ which.max(fit_MDD$pip[cs2_idx]) ]
       
-      # rsID lists per CS
-      cs1_rs <- x$meta$snps[cs1_idx]
-      cs2_rs <- x$meta$snps[cs2_idx]
-      
-      # sizes and PIP sums
-      cs1_size <- length(cs1_idx)
-      cs2_size <- length(cs2_idx)
-      cs1_pipsum <- sum(x$fits$MCP$alpha[l1, cs1_idx], na.rm = TRUE)
-      cs2_pipsum <- sum(x$fits$MDD$alpha[l2, cs2_idx], na.rm = TRUE)
-      
-      # top SNP (max PIP) and its PIP
-      top1 <- cs1_idx[ which.max(x$fits$MCP$pip[cs1_idx]) ]
-      top2 <- cs2_idx[ which.max(x$fits$MDD$pip[cs2_idx]) ]
-      
-      coloc_pub <- rbind(coloc_pub, data.frame(
-        FUMA_lead      = k,
-        coloc_method        = m,
-        PP4           = ss$PP.H4.abf[i],
-        MCP_CS_size   = cs1_size,
-        MDD_CS_size   = cs2_size,
-        MCP_CS_PIPsum = cs1_pipsum,
-        MDD_CS_PIPsum = cs2_pipsum,
+      out[[length(out)+1L]] <- data.frame(
+        Lead_SNP = k,
+        coloc_method       = m,
+        PP4                = ss$PP.H4.abf[i],
+        MCP_CS_size   = length(cs1_idx),
+        MDD_CS_size       = length(cs2_idx),
         top_MCP_snp   = x$meta$snps[top1],
-        top_MDD_snp   = x$meta$snps[top2],
-        SNP_PP4_top   = NA, 
-        MCP_CS_snps   = paste(cs1_rs, collapse=";"),
-        MDD_CS_snps   = paste(cs2_rs, collapse=";"),
-        stringsAsFactors = FALSE
-      ))
+        top_MDD_snp       = x$meta$snps[top2],
+        MCP_CS_snps   = paste(x$meta$snps[cs1_idx], collapse=";"),
+        MDD_CS_snps       = paste(x$meta$snps[cs2_idx], collapse=";"),
+        stringsAsFactors   = FALSE
+      )
     }
     
   } else if (m == "abf") {
-    if (x$coloc$summary$PP.H4.abf >= 0.8) {
-      # top shared SNP under H4 = max SNP.PP.H4
-      ord <- order(-x$coloc$full$results$SNP.PP.H4)
-      top_shared <- x$coloc$full$results$snp[ord][1]
-      top_shared_pp4 <- x$coloc$full$results$SNP.PP.H4[ord][1]
-      
-      coloc_pub <- rbind(coloc_pub, data.frame(
-        FUMA_lead      = k,
-        coloc_method        = m,
-        PP4           = x$coloc$summary$PP.H4.abf,
-        MCP_CS_size   = NA_integer_,
-        MDD_CS_size   = NA_integer_,
-        MCP_CS_PIPsum = NA_real_,
-        MDD_CS_PIPsum = NA_real_,
-        top_MCP_snp   = top_shared,
-        top_MDD_snp   = top_shared,
-        SNP_PP4_top   = top_shared_pp4,
-        MCP_CS_snps   = NA,
-        MDD_CS_snps   = NA,
-        stringsAsFactors = FALSE
-      ))
-    }
+    
+    pp4 <- pph4_from_summary(x$coloc$summary)
+    res <- x$coloc$full$results
+    ord <- order(-res$SNP.PP.H4)
+    top_shared     <- res$snp[ord][1]
+    
+    out[[length(out)+1L]] <- data.frame(
+      Lead_SNP = k,
+      coloc_method = m,
+      PP4 = pp4,
+      MDD_CS_size = NA_integer_,
+      MCP_CS_size = NA_integer_,
+      top_MCP_snp = top_shared,
+      top_MDD_snp = top_shared,
+      MCP_CS_snps = NA_character_,
+      MDD_CS_snps = NA_character_,
+      stringsAsFactors = FALSE
+    )
   }
 }
 
-coloc_pub <- coloc_pub[!duplicated(coloc_pub[, c("top_MCP_snp","top_MDD_snp")]), ]
-write.csv(coloc_pub, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs.csv", row.names = F)
+coloc_pub <- if (length(out)) do.call(rbind, out) else
+  data.frame(
+    Lead_SNP = character(),
+    coloc_method = character(),
+    PP4 = numeric(),
+    MCP_CS_size = integer(),
+    MDD_CS_size = integer(),
+    top_MCP_snp = character(),
+    top_MDD_snp = character(),
+    MCP_CS_snps = character(),
+    MDD_CS_snps = character(),
+    stringsAsFactors = FALSE
+  )
 
+coloc_pub_sig <- subset(coloc_pub, PP4 > 0.80)
+coloc_pub_sig <- coloc_pub_sig %>%
+  distinct(across(all_of(c("top_MCP_snp", "top_MCP_snp", "MCP_CS_snps", "MDD_CS_snps"))), .keep_all = TRUE)
+
+write.csv(coloc_pub, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait.csv", row.names = F)
+write.csv(coloc_pub_sig, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", row.names = F)
