@@ -79,9 +79,9 @@ lift_eqtl_df <- function(df, chain = ch, id_col = "variant_id") {
 eqtl_list <- map(eqtl_list, lift_eqtl_df)
 
 ## Genes ----
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_with_v2g_genes.csv", header = T)
+genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait_in_text.csv", header = T, skip = 1)
 gene_list <- genes %>%
-  dplyr::mutate(v2g_list = strsplit(v2g_genes, ";", fixed = TRUE)) %>%
+  dplyr::mutate(v2g_list = strsplit(Symbol, ";", fixed = TRUE)) %>%
   dplyr::pull(v2g_list) %>%
   unlist(use.names = FALSE) %>%
   unique()
@@ -90,7 +90,7 @@ mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", GRCh 
 gene_coords <- getBM(
   attributes = c("ensembl_gene_id", "hgnc_symbol", "chromosome_name",
                  "start_position", "end_position", "strand"),
-  filters = "ensembl_gene_id",
+  filters = "hgnc_symbol",
   values = gene_list,
   mart = mart
 )
@@ -157,8 +157,6 @@ for(gene_idx in seq_len(nrow(gene_coords))){
   )
   system(cmd)
 }
-
-
 
 # SuSie + coloc ----
 coloc_results <- list()
@@ -327,6 +325,9 @@ for(gene_idx in seq_len(nrow(gene_coords))){
 
 # Save outputs ----
 saveRDS(coloc_results, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/eQTL.rds")
+
+# Power analysis ----
+
 
 # Format results ----
 parse_key <- function(k) {

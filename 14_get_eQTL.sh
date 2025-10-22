@@ -4,7 +4,7 @@ chromosomes=(5 13 7 11 2 9 4 3 20 10 18)
 for c in $chromosomes; do
   gcloud storage cp \
     --billing-project=united-button-442820-q5 \
-    "gs://gtex-resources/GTEx_Analysis_v8_QTLs/GTEx_Analysis_v8_EUR_eQTL_all_associations/Brain_*.v8.EUR.allpairs.chr${c}.parquet" \
+    "gs://gtex-resources/GTEx_Analysis_v10_QTLs/GTEx_Analysis_v10_eQTL_all_associations/Brain_*.v8.EUR.allpairs.chr${c}.parquet" \
     summary_statistics/eQTL/brain/full/
 done
 
@@ -39,5 +39,3 @@ duckdb -c "
     ) TO '${out_file}' (FORMAT CSV, HEADER, DELIMITER ',');
   "
 done
-
-

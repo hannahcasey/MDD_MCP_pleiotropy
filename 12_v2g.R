@@ -149,4 +149,4 @@ cs_annot <- cs_annot %>%
 
 # Save outputs ----
 write.csv(V2G_long, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/v2g_long.csv", row.names = FALSE)
-write.csv(cs_annot, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait_in_text.csv", row.names = FALSE)
+write.csv(cs_annot, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait", row.names = FALSE)
