@@ -8,27 +8,19 @@ library(ggrepel)
 MDD_MCP <- readRDS("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/MDD_MCP_AnalysisObject.rds")
 MDD_MCP_res <- MDD_MCP$get_trait_results()
 conjFDR.clump.lead <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.lead.csv", header = T)
+conjFDR.clump.loci <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", header = T)
 
 file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD//pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
 MDD_GWAS <- fread(file, sep = "\t")
 MDD_MCP_res <- left_join(MDD_MCP_res, dplyr::select(MDD_GWAS, ID, CHROM, POS), by = c("SNP" = "ID"))
 
 # Load genes
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_with_v2g_genes.csv", header = T)
+genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait_in_text.csv", header = T, skip = 1)
 gene_list <- genes %>%
-  mutate(v2g_list = strsplit(v2g_genes, ";", fixed = TRUE)) %>%
+  mutate(v2g_list = strsplit(Symbol, ";", fixed = TRUE)) %>%
   pull(v2g_list) %>%
   unlist(use.names = FALSE) %>%
   unique()
-
-mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", GRCh = 37)
-gene_coords <- getBM(
-  attributes = c("ensembl_gene_id", "hgnc_symbol", "chromosome_name",
-                 "start_position", "end_position", "strand"),
-  filters = "ensembl_gene_id",
-  values = gene_list,
-  mart = mart
-)
 
 # Manhattan plots ----
 df <- MDD_MCP_res %>%
@@ -51,11 +43,11 @@ chr_info <- df %>%
 
 df <- df %>%
   left_join(dplyr::select(chr_info, CHR, offset), by = "CHR") %>%
-  mutate(
+  dplyr::mutate(
     cumBP     = BP + offset,
     chrom_col = factor(CHR %% 2),
     is_lead   = SNP %in% conjFDR.clump.lead$LEAD_SNP,
-    is_colocalised = SNP  %in% genes$FUMA_lead,
+    is_colocalised = SNP %in% genes$RSID
   )
 
 cons <- MDD_MCP_res %>%
@@ -73,13 +65,10 @@ lead_df_same_plot <- lead_df_same
 
 labels_df <- df %>%
   filter(is_colocalised) %>%              
-  left_join(genes %>% dplyr::select(FUMA_lead, v2g_genes),
-            by = c("SNP" = "FUMA_lead")) %>%
-  separate_rows(v2g_genes, sep = ";") %>%
-  dplyr::rename(ensembl_gene_id = v2g_genes) %>%
-  left_join(gene_coords %>% dplyr::select(ensembl_gene_id, hgnc_symbol),
-            by = "ensembl_gene_id") %>%
-  mutate(label_gene = dplyr::coalesce(hgnc_symbol, ensembl_gene_id)) %>%
+  left_join(genes %>% dplyr::select(RSID, Symbol),
+            by = c("SNP" = "RSID")) %>%
+  separate_rows(Symbol, sep = ";") %>%
+  mutate(label_gene = Symbol) %>%
   group_by(SNP) %>%
   summarise(
     cumBP = dplyr::first(cumBP),

@@ -326,9 +326,6 @@ for(gene_idx in seq_len(nrow(gene_coords))){
 # Save outputs ----
 saveRDS(coloc_results, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/eQTL.rds")
 
-# Power analysis ----
-
-
 # Format results ----
 parse_key <- function(k) {
   parts <- strsplit(k, "_", fixed = TRUE)[[1]]
@@ -428,13 +425,14 @@ coloc_full <- if (length(out)) do.call(rbind, out) else
 coloc_full <- arrange(coloc_full, coloc_method, Gene, Tissue, Disorder)
 
 coloc_paper <- coloc_full %>%
-  filter(PP4 > 0.80) %>%
-  transmute(Tissue, Gene, disorder = tolower(Disorder), PP4) %>%      # keep only what we need
+  transmute(Tissue, Gene, disorder = tolower(Disorder), PP4) %>%
   group_by(Tissue, Gene, disorder) %>%
-  summarise(PP4 = max(PP4, na.rm = TRUE), .groups = "drop") %>%       # one value per (gene,tissue,disorder)
+  summarise(PP4 = max(PP4, na.rm = TRUE), .groups = "drop") %>%
   mutate(disorder = recode(disorder, mdd = "pph4mdd", mcp = "pph4mcp")) %>%
-  pivot_wider(names_from = disorder, values_from = PP4, values_fill = NA_real_) %>%
-  arrange(Gene, Tissue)
+  tidyr::pivot_wider(names_from = disorder, values_from = PP4) %>%
+  dplyr::filter(dplyr::if_any(dplyr::starts_with("pph4"), ~ .x > 0.80)) %>%
+  dplyr::mutate(dplyr::across(dplyr::starts_with("pph4"), ~ round(.x, 3))) %>%
+  dplyr::arrange(Gene, Tissue)
 
 write.csv(coloc_full, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_eQTL.csv", row.names = F)
 write.csv(coloc_paper, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_eQTL_in_text.csv", row.names = F)
