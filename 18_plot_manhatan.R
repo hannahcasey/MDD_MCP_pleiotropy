@@ -15,9 +15,9 @@ MDD_GWAS <- fread(file, sep = "\t")
 MDD_MCP_res <- left_join(MDD_MCP_res, dplyr::select(MDD_GWAS, ID, CHROM, POS), by = c("SNP" = "ID"))
 
 # Load genes
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait_in_text.csv", header = T, skip = 1)
+genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/loci_annotated_in_text.csv", header = T)
 gene_list <- genes %>%
-  mutate(v2g_list = strsplit(Symbol, ";", fixed = TRUE)) %>%
+  mutate(v2g_list = strsplit(v2g_symbols, ";", fixed = TRUE)) %>%
   pull(v2g_list) %>%
   unlist(use.names = FALSE) %>%
   unique()
@@ -65,7 +65,7 @@ lead_df_same_plot <- lead_df_same
 
 labels_df <- df %>%
   filter(is_colocalised) %>%              
-  left_join(genes %>% dplyr::select(RSID, Symbol),
+  left_join(genes %>% dplyr::select(LEAD_BP, Symbol),
             by = c("SNP" = "RSID")) %>%
   separate_rows(Symbol, sep = ";") %>%
   mutate(label_gene = Symbol) %>%

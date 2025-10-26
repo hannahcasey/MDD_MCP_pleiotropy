@@ -10,6 +10,7 @@ library(tidyr)
 
 # Load credible sets ----
 cs <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", header = T)
+cs_annotated <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant_annotated.csv", header = T)
 
 .ot_run_list <- function(query, variables = list()) {
   con <- ghql::GraphqlClient$new("https://api.platform.opentargets.org/api/v4/graphql")
@@ -79,7 +80,7 @@ v2g_scores <- fread(
 V2G_long <- left_join(variant_ids, v2g_scores, by = c("chr" = "chr_id", "pos" = "position"))
 
 V2G_long <- V2G_long %>%
-  rename(V2G_score = overall_score) %>%
+  dplyr::rename(V2G_score = overall_score) %>%
   dplyr::select(rsid, variantId, gene_id, V2G_score)
 
 # Format credible sets ----
@@ -94,10 +95,10 @@ split_rs <- function(x) {
   else str_split(x, ";", simplify = FALSE)[[1]] |> str_trim() |> discard(~ .x == "")
 }
 
-clump.lead <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.lead.csv", header = T)
-clump.lead <- dplyr::select(clump.lead, CHR, LEAD_SNP, LEAD_BP) 
+clump.loci <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", header = T)
+clump.loci <- dplyr::select(clump.loci, CHR, LEAD_SNP, LEAD_BP) 
 
-cs_annot <- cs %>%
+cs <- cs %>%
   mutate(
     MCP_rs = map(MCP_CS_snps, split_rs),
     MDD_rs = map(MDD_CS_snps, split_rs),
@@ -113,10 +114,9 @@ cs_annot <- cs %>%
     }),
     v2g_genes = as.character(v2g_genes)
   ) %>%
-  left_join(clump.lead, by = c("Lead_SNP" = "LEAD_SNP")) %>%
-  rename(chr = CHR, pos = LEAD_BP) %>%
-  dplyr::select(Lead_SNP, chr, pos, coloc_method, PP4, MCP_CS_size, MDD_CS_size,
-         top_MCP_snp, top_MDD_snp, v2g_genes) %>%
+  left_join(clump.loci, by = c("Lead_SNP" = "LEAD_SNP")) %>%
+  dplyr::rename(chr = CHR, pos = LEAD_BP) %>%
+  dplyr::select(Lead_SNP, chr, pos, coloc_method, PP4, MCP_CS_size, MDD_CS_size, top_MCP_snp, top_MDD_snp, v2g_genes) %>%
   arrange(coloc_method)
 
 ## Get gene names ----
@@ -131,7 +131,7 @@ gene_coords <- getBM(
 
 V2G_long <- left_join(V2G_long, gene_coords, by = c("gene_id" = "ensembl_gene_id"))
 
-cs_annot <- cs_annot %>%
+cs <- cs %>%
   mutate(row_id = dplyr::row_number(),
          v2g_genes = na_if(v2g_genes, "")) %>%
   separate_rows(v2g_genes, sep = ";") %>%      # splits "A;B"
@@ -144,9 +144,10 @@ cs_annot <- cs_annot %>%
     v2g_symbols = paste(unique(na.omit(hgnc_symbol)), collapse = ";"),
     .groups = "drop"
   ) %>%
-  dplyr::select(-row_id) %>%
-  arrange(chr, pos)
+  dplyr::select(chr, pos, v2g_symbols)
+
+cs_annotated <- left_join(cs_annotated, cs, by = c("CHR" = "chr", "LEAD_BP" = "pos"))
 
 # Save outputs ----
 write.csv(V2G_long, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/v2g_long.csv", row.names = FALSE)
-write.csv(cs_annot, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait", row.names = FALSE)
+write.csv(cs_annotated, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/loci_annotated_in_text.csv", row.names = FALSE)

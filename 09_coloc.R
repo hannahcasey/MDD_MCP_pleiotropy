@@ -16,8 +16,8 @@ MCP_GWAS <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocali
 setDT(MCP_GWAS)
 MCP_n <- 387649
 
-## Lead SNPs ----
-FUMA_leads <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.lead.csv", header = T)
+## Share Loci ----
+FUMA_loci <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", header = T)
 
 ## 1000g BIM file ----
 BIM <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/1000g/EUR.bim")
@@ -30,16 +30,15 @@ PLINK <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resourc
 REF_PREFIX <- "/Users/hannahcasey/Desktop/PhD/projects/UKB_chronic_pain_depressive_symptoms/resources/1000g/EUR"
 LD_DIR <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc"
 
-for(lead_idx in seq_len(nrow(FUMA_leads))){
+for(loci_idx in seq_len(nrow(FUMA_loci))){
   
-  SNP_chr  <- FUMA_leads$CHR[lead_idx]
-  SNP_pos  <- FUMA_leads$LEAD_BP[lead_idx]
-  SNP_rsid <- FUMA_leads$LEAD_SNP[lead_idx]
-  start_pos <- SNP_pos - 250000L
-  end_pos   <- SNP_pos + 250000L
-  
+  SNP_rsid <- FUMA_loci$LEAD_SNP[loci_idx]
+  CHR <- FUMA_loci$CHR[loci_idx]
+  start_pos  <- FUMA_loci$MinBP[loci_idx]
+  end_pos  <- FUMA_loci$MaxBP[loci_idx]
+
   region_df <- BIM %>%
-    filter(V1 == SNP_chr, between(V4, start_pos, end_pos)) %>%
+    filter(V1 == CHR, between(V4, start_pos, end_pos)) %>%
     distinct(V2, V4) %>%
     rename(rsid = V2, pos = V4)
   
@@ -66,11 +65,12 @@ for(lead_idx in seq_len(nrow(FUMA_leads))){
 # SuSie + coloc ----
 coloc_results <- list()
 
-for(lead_idx in seq_len(nrow(FUMA_leads))){
+for(loci_idx in seq_len(nrow(FUMA_loci))){
   
-  SNP_rsid <- FUMA_leads$LEAD_SNP[lead_idx]
+  SNP_rsid <- FUMA_loci$LEAD_SNP[loci_idx]
   R    <- as.matrix(fread(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc/", SNP_rsid, ".ld.gz"), header = FALSE))
   snps <- readLines(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc/", SNP_rsid, ".snplist"))
+  if(length(snps) < 2) next
   rownames(R) <- colnames(R) <- snps
 
   BIM_sub <- BIM[match(snps, BIM$V2), .(SNP = V2, REF = V6, ALT = V5)]
@@ -96,7 +96,7 @@ for(lead_idx in seq_len(nrow(FUMA_leads))){
   keep <- !(pal & maf > 0.40) & !is.na(flip_mcp) & !is.na(flip_mdd)
   idx <- which(keep)
   
-  R         <- R[idx, idx, drop=FALSE]
+  R <- R[idx, idx, drop=FALSE]
   R <- (R + t(R)) / 2
   diag(R) <- 1
   

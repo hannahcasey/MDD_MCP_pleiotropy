@@ -79,19 +79,14 @@ lift_eqtl_df <- function(df, chain = ch, id_col = "variant_id") {
 eqtl_list <- map(eqtl_list, lift_eqtl_df)
 
 ## Genes ----
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/cs_cross_trait_in_text.csv", header = T, skip = 1)
-gene_list <- genes %>%
-  dplyr::mutate(v2g_list = strsplit(Symbol, ";", fixed = TRUE)) %>%
-  dplyr::pull(v2g_list) %>%
-  unlist(use.names = FALSE) %>%
-  unique()
+genes <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/genes.txt", header = F)
   
 mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", GRCh = 37)
 gene_coords <- getBM(
   attributes = c("ensembl_gene_id", "hgnc_symbol", "chromosome_name",
                  "start_position", "end_position", "strand"),
-  filters = "hgnc_symbol",
-  values = gene_list,
+  filters = "ensembl_gene_id",
+  values = genes$V1,
   mart = mart
 )
 
@@ -110,8 +105,8 @@ for(gene_idx in seq_len(nrow(gene_coords))){
   
   gene_chr  <- gene_coords$chromosome_name[gene_idx]
   gene_name <- gene_coords$hgnc_symbol[gene_idx]
-  start_pos <- gene_coords$start_position[gene_idx] - 250000L
-  end_pos   <- gene_coords$end_position[gene_idx] + 250000L
+  start_pos <- gene_coords$start_position[gene_idx] - 500000L
+  end_pos   <- gene_coords$end_position[gene_idx] + 500000L
   
   region_df <- BIM %>%
     dplyr::rename(chr = V1, 
@@ -209,6 +204,7 @@ for(gene_idx in seq_len(nrow(gene_coords))){
       eQTL_GWAS$chr_hg19 <- as.numeric(gsub("chr", "", eQTL_GWAS$chr_hg19))
       eQTL_GWAS$A1 <- do.call(rbind, strsplit(eQTL_GWAS$variant_id, "_", fixed = TRUE))[, 4]
       eQTL_GWAS <- left_join(eQTL_GWAS, rsid_map, by = c("chr_hg19" = "CHROM", "pos_hg19" = "POS"))
+      eQTL_GWAS <- subset(eQTL_GWAS, !is.infinite(slope))
       setDT(eQTL_GWAS)
       m_eqtl <- eQTL_GWAS[match(snps, eQTL_GWAS$ID),  .(SNP = ID, A1, BETA = slope, SE = slope_se, EAF = maf, P = pval_nominal)]
       
