@@ -366,15 +366,18 @@ for (k in names(coloc_results)) {
         Tissue             = parts$brain_tissue,  
         Disorder           = parts$disorder,
         Gene               = parts$gene,
-        coloc_method       = m,
+        `Coloc appraoch`       = m,
         PP4                = ss$PP.H4.abf[i],
-        Disorder_CS_size   = length(cs1_idx),
-        eQTL_CS_size       = length(cs2_idx),
-        top_disorder_snp   = x$meta$snps[top1],
-        top_eQTL_snp       = x$meta$snps[top2],
-        Disorder_CS_snps   = paste(x$meta$snps[cs1_idx], collapse=";"),
-        eQTL_CS_snps       = paste(x$meta$snps[cs2_idx], collapse=";"),
-        stringsAsFactors   = FALSE
+        
+        
+        `Disorder credible set (n)`   = length(cs1_idx),
+        `Disorder credible set SNPs`   = paste(x$meta$snps[cs1_idx], collapse=";"),
+        `Top Disorder SNP`   = x$meta$snps[top1],
+        `eQTL credible set (n)`   = length(cs2_idx),
+        `eQTL credible set SNPs`   = paste(x$meta$snps[cs2_idx], collapse=";"),
+        `Top eQTL SNP`   = x$meta$snps[top2],
+        stringsAsFactors   = FALSE,
+        check.names = FALSE
       )
     }
     
@@ -389,15 +392,16 @@ for (k in names(coloc_results)) {
       Tissue             = parts$brain_tissue,
       Disorder           = parts$disorder,
       Gene               = parts$gene,
-      coloc_method       = m,
+      `Coloc appraoch`       = m,
       PP4                = pp4,
-      Disorder_CS_size   = NA_integer_,
-      eQTL_CS_size       = NA_integer_,
-      top_disorder_snp   = top_shared,
-      top_eQTL_snp       = top_shared,
-      Disorder_CS_snps   = NA_character_,
-      eQTL_CS_snps       = NA_character_,
-      stringsAsFactors   = FALSE
+      `Disorder credible set (n)`   = NA_integer_,
+      `Disorder credible set SNPs`   = NA_integer_,
+      `Top Disorder SNP`   = top_shared,
+      `eQTL credible set (n)`   = NA_integer_,
+      `eQTL credible set SNPs`   = NA_integer_,
+      `Top eQTL SNP`   = top_shared,
+      stringsAsFactors   = FALSE,
+      check.names = FALSE
     )
   }
 }
@@ -407,27 +411,28 @@ coloc_full <- if (length(out)) do.call(rbind, out) else
     Tissue = character(),
     Disorder = character(),
     Gene = character(),
-    coloc_method = character(),
+    `Coloc appraoch` = character(),
     PP4 = numeric(),
-    Disorder_CS_size = integer(),
-    eQTL_CS_size = integer(),
-    top_disorder_snp = character(),
-    top_eQTL_snp = character(),
-    Disorder_CS_snps = character(),
-    eQTL_CS_snps = character(),
-    stringsAsFactors = FALSE
+    `Disorder credible set (n)` = character(),
+    `Disorder credible set SNPs` = character(),
+    `Top Disorder SNP` = character(),
+    `eQTL credible set (n)`= character(),
+    `eQTL credible set SNPs`= character(),
+    `Top eQTL SNP`= character(),
+    stringsAsFactors   = FALSE,
+    check.names = FALSE
   )
 
-coloc_full <- arrange(coloc_full, coloc_method, Gene, Tissue, Disorder)
-
+coloc_full <- arrange(coloc_full, Gene, Tissue, Disorder)
+coloc_full$PP4 <- round(coloc_full$PP4, digits = 2)
+  
 coloc_paper <- coloc_full %>%
   transmute(Tissue, Gene, disorder = tolower(Disorder), PP4) %>%
   group_by(Tissue, Gene, disorder) %>%
   summarise(PP4 = max(PP4, na.rm = TRUE), .groups = "drop") %>%
-  mutate(disorder = recode(disorder, mdd = "pph4mdd", mcp = "pph4mcp")) %>%
+  mutate(disorder = recode(disorder, mdd = "PP4 MDD", mcp = "PP4 MCP")) %>%
   tidyr::pivot_wider(names_from = disorder, values_from = PP4) %>%
-  dplyr::filter(dplyr::if_any(dplyr::starts_with("pph4"), ~ .x > 0.80)) %>%
-  dplyr::mutate(dplyr::across(dplyr::starts_with("pph4"), ~ round(.x, 3))) %>%
+  dplyr::filter(dplyr::if_any(dplyr::starts_with("PP4"), ~ .x > 0.80)) %>%
   dplyr::arrange(Gene, Tissue)
 
 write.csv(coloc_full, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_eQTL.csv", row.names = F)

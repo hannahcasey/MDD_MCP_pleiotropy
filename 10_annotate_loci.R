@@ -12,14 +12,10 @@ library(data.table)
 MDD_MCP <- readRDS("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/MDD_MCP_AnalysisObject.rds")
 MDD_MCP_res <- MDD_MCP$get_trait_results()
 
-FUMA_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", sep = "\t")
-coloc_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv")
+FUMA_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/loci_formatted.csv", check.names = FALSE)
+coloc_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", check.names = FALSE)
 
-coloc_loci <- left_join(coloc_loci, FUMA_loci, by = c("Lead_SNP" = "LEAD_SNP"))
-
-## Load GWAS
-MDD_GWAS <- fread("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv", sep = "\t")
-MCP_GWAS <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/ChronicPain.stats", header = T)
+coloc_loci <- left_join(coloc_loci, FUMA_loci, by = c("Lead SNP", "Max pos", "Min pos", "Chromosome"))
 
 ## Get locus bands
 ses <- browserSession("UCSC"); genome(ses) <- "hg19"
@@ -36,7 +32,7 @@ get_band <- function(chr, start, end) {
 }
 
 bands <- coloc_loci %>%
-  mutate(Band = mapply(get_band, CHR, MinBP, MaxBP))
+  mutate(Band = mapply(get_band, Chromosome, `Min pos`, `Max pos`))
 
 ## SNP annotation
 ## Consequence
@@ -50,43 +46,27 @@ get_vep_consequence <- function(rsid) {
 
 ## CADD score
 get_vep_cadd <- function(rsid) {
+  
   url <- sprintf(
     "https://rest.ensembl.org/vep/human/id/%s?content-type=application/json&CADD=1",
     rsid
   )
-  r <- httr::GET(
-    url   = "https://rest.ensembl.org/vep/human/id",
-    query = list(id = rsid, CADD = "1")
-  )
+  r <- httr::GET(url)
   
-  if (is.null(r) || httr::status_code(r) != 200) {
-    return(data.frame(id = rsid, most_severe_consequence = NA, cadd_raw = NA, cadd_phred = NA))
-  }
   x <- jsonlite::fromJSON(rawToChar(r$content), simplifyDataFrame = F)
   rec <- x[[1]]
   
-  # CADD can appear on various consequence blocks; take the max PHRED across any we see
-  take_max <- function(df, col) if (!is.null(df) && col %in% names(df)) suppressWarnings(max(as.numeric(df[[col]]), na.rm = TRUE)) else NA_real_
-  phreds <- c(
-    suppressWarnings(as.numeric(rec$CADD_PHRED)),
-    take_max(rec$transcript_consequences, "CADD_PHRED"),
-    take_max(rec$regulatory_feature_consequences, "CADD_PHRED"),
-    take_max(rec$motif_feature_consequences, "CADD_PHRED"),
-    take_max(rec$intergenic_consequences, "CADD_PHRED")
-  )
-  raws <- c(
-    suppressWarnings(as.numeric(rec$CADD_RAW)),
-    take_max(rec$transcript_consequences, "CADD_RAW"),
-    take_max(rec$regulatory_feature_consequences, "CADD_RAW"),
-    take_max(rec$motif_feature_consequences, "CADD_RAW"),
-    take_max(rec$intergenic_consequences, "CADD_RAW")
-  )
-  data.frame(
-    id = rec$id %||% rec$input %||% rsid,
-    most_severe_consequence = rec$most_severe_consequence %||% NA_character_,
-    cadd_raw = if (all(is.na(raws))) NA_real_ else max(raws, na.rm = TRUE),
-    cadd_phred = if (all(is.na(phreds))) NA_real_ else max(phreds, na.rm = TRUE)
-  )
+  tc <- rec$transcript_consequences
+  if (is.null(tc) || length(tc) == 0) tc <- rec$intergenic_consequences
+    
+  ph <- numeric(0)
+
+  for (d in tc) {
+      ph <- c(ph, d$cadd_phred)
+  }
+  
+  return(max(ph))
+  
 }
 
 ## Regulomedb rank
@@ -95,12 +75,13 @@ get_reg <- function(rsid) {
   return(unique(reg[[rsid]]$regulome_score[,2]))
 }
 
-top_MCP_SNPs <- coloc_loci$top_MCP_snp
-top_MDD_SNPs <- coloc_loci$top_MDD_snp
+top_MDD_SNPs <- coloc_loci$`Top MDD SNP`
 
-top_MCP_SNPs_ann <- lapply(top_MCP_SNPs, function(rs) {
+top_MCP_SNPs <- coloc_loci$`Top MCP SNP`
+
+top_MDD_SNPs_ann <- lapply(top_MDD_SNPs, function(rs) {
   conseq <- get_vep_consequence(rs)
-  cr <- round(cadd_scores$CADD_PHRED_max[cadd_scores$rsid == rs], digits = 2)
+  cr <- round(get_vep_cadd(rs), digits = 2)
   rb <- get_reg(rs)
   
   tibble(
@@ -111,9 +92,9 @@ top_MCP_SNPs_ann <- lapply(top_MCP_SNPs, function(rs) {
   )
 }) |> dplyr::bind_rows()
 
-top_MDD_SNPs_ann <- lapply(top_MDD_SNPs, function(rs) {
+top_MCP_SNPs_ann <- lapply(top_MCP_SNPs, function(rs) {
   conseq <- get_vep_consequence(rs)
-  cr <- round(cadd_scores$CADD_PHRED_max[cadd_scores$rsid == rs], digits = 2)
+  cr <- round(get_vep_cadd(rs), digits = 2)
   rb <- get_reg(rs)
   
   tibble(
@@ -126,18 +107,34 @@ top_MDD_SNPs_ann <- lapply(top_MDD_SNPs, function(rs) {
 
 ## Format table
 annotated <- bands %>%
-  dplyr::select(CHR, LEAD_BP, Band, MinBP, MaxBP, PP4, top_MDD_snp, top_MCP_snp)
+  dplyr::select(Band,"Min pos", "Max pos", PP4, "Top MDD SNP", "Top MCP SNP")
 
 for(row in 1:nrow(annotated)){
-  if(annotated[row,"top_MDD_snp"] == annotated[row,"top_MCP_snp"]){
-    annotated$conseq[row] <- top_MDD_SNPs_ann$conseq[row]
-    annotated$cr[row] <-  top_MDD_SNPs_ann$cr[row]
-    annotated$rb[row] <- top_MDD_SNPs_ann$rb[row]
+  if(annotated[row,"Top MDD SNP"] == annotated[row,"Top MCP SNP"]){
+    annotated$`Most severe consequence`[row] <- top_MDD_SNPs_ann$conseq[row]
+    annotated$CADD[row] <-  top_MDD_SNPs_ann$cr[row]
+    annotated$RegulomeDB[row] <- top_MDD_SNPs_ann$rb[row]
   } else{
-    annotated$conseq[row] <- paste0(top_MDD_SNPs_ann$conseq[row], ", ", top_MCP_SNPs_ann$conseq[row])
-    annotated$cr[row] <-  paste0(top_MDD_SNPs_ann$cr[row], ", ", top_MCP_SNPs_ann$cr[row])
-    annotated$rb[row] <- paste0(top_MDD_SNPs_ann$rb[row], ", ", top_MCP_SNPs_ann$rb[row])
+    
+    if(top_MDD_SNPs_ann$conseq[row] == top_MCP_SNPs_ann$conseq[row]){
+      annotated$`Most severe consequence`[row] <- top_MDD_SNPs_ann$conseq[row]
+    }else{
+      annotated$`Most severe consequence`[row] <- paste0(top_MDD_SNPs_ann$conseq[row], ", ", top_MCP_SNPs_ann$conseq[row])
+    }
+    
+    if(top_MDD_SNPs_ann$cr[row] == top_MCP_SNPs_ann$cr[row]){
+      annotated$CADD[row] <- top_MDD_SNPs_ann$cr[row]
+    }else{
+      annotated$CADD[row] <- paste0(top_MDD_SNPs_ann$cr[row], ", ", top_MCP_SNPs_ann$cr[row])
+    }
+    
+    if(top_MDD_SNPs_ann$rb[row] == top_MCP_SNPs_ann$rb[row]){
+      annotated$RegulomeDB[row] <- top_MDD_SNPs_ann$rb[row]
+    }else{
+      annotated$RegulomeDB[row] <- paste0(top_MDD_SNPs_ann$rb[row], ", ", top_MCP_SNPs_ann$rb[row])
+    }
   }
 }
 
 write.csv(annotated, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant_annotated.csv", row.names = F)
+

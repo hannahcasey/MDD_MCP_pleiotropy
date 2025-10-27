@@ -235,7 +235,7 @@ for (k in names(coloc_results)) {
   }
 }
 
-coloc_pub <- if (length(out)) do.call(rbind, out) else
+out_long <- if (length(out)) do.call(rbind, out) else
   data.frame(
     Lead_SNP = character(),
     coloc_method = character(),
@@ -249,9 +249,35 @@ coloc_pub <- if (length(out)) do.call(rbind, out) else
     stringsAsFactors = FALSE
   )
 
-coloc_pub_sig <- subset(coloc_pub, PP4 > 0.80)
-coloc_pub_sig <- coloc_pub_sig %>%
-  distinct(across(all_of(c("top_MCP_snp", "top_MCP_snp", "MCP_CS_snps", "MDD_CS_snps"))), .keep_all = TRUE)
 
-write.csv(coloc_pub, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait.csv", row.names = F)
-write.csv(coloc_pub_sig, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", row.names = F)
+FUMA_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", sep = "\t")
+
+out_long <- out_long %>%
+  left_join(FUMA_loci, by = c("Lead_SNP" = "LEAD_SNP")) %>%
+  dplyr::select(CHR, MinBP, MaxBP, Lead_SNP, LEAD_BP, 
+         coloc_method, 
+         MDD_CS_size, MDD_CS_snps, top_MDD_snp,
+         MCP_CS_size, MCP_CS_snps, top_MCP_snp,
+         PP4) %>%
+  dplyr::rename(Chromosome = CHR,
+                `Min pos` = MinBP,
+                `Max pos` = MaxBP,
+                `Lead SNP` = Lead_SNP,
+                `Lead SNP pos` = LEAD_BP,
+                `Coloc approach` = coloc_method,
+                `MDD credible set (n)` = MDD_CS_size,
+                `MCP credible set (n)` = MCP_CS_size,
+                `Top MDD SNP` = top_MDD_snp,
+                `Top MCP SNP` = top_MCP_snp,
+                `MDD credible set SNPs` = MDD_CS_snps,
+                `MCP credible set SNPs` = MCP_CS_snps
+  )
+
+
+
+out_short <- subset(out_long, PP4 > 0.80)
+out_short <- out_short %>%
+  distinct(across(all_of(c("Top MCP SNP", "Top MDD SNP", "MDD credible set SNPs", "MCP credible set SNPs"))), .keep_all = TRUE)
+
+write.csv(out_long, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait.csv", row.names = F)
+write.csv(out_short, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", row.names = F)
