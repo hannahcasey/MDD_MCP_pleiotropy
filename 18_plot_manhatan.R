@@ -3,6 +3,8 @@ library(dplyr)
 library(rtracklayer)
 library(GenomicRanges)
 library(ggrepel)
+library(data.table)
+library(tidyr)
 
 # Load conjFDR results
 MDD_MCP <- readRDS("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/MDD_MCP_AnalysisObject.rds")
@@ -15,23 +17,27 @@ MDD_GWAS <- fread(file, sep = "\t")
 MDD_MCP_res <- left_join(MDD_MCP_res, dplyr::select(MDD_GWAS, ID, CHROM, POS), by = c("SNP" = "ID"))
 
 # Load genes
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/loci_annotated_in_text.csv", header = T)
+genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/loci_annotated_in_text.csv", header = T, check.names = F)
+
+genes <- left_join(genes, conjFDR.clump.loci, by = c("Min pos" = "MinBP",   "Max pos" = "MaxBP"))
+
 gene_list <- genes %>%
-  mutate(v2g_list = strsplit(v2g_symbols, ";", fixed = TRUE)) %>%
+  mutate(v2g_list = strsplit(Symbol, ";", fixed = TRUE)) %>%
   pull(v2g_list) %>%
   unlist(use.names = FALSE) %>%
   unique()
 
 # Manhattan plots ----
-df <- MDD_MCP_res %>%
+manhattan_df <- MDD_MCP_res %>%
   mutate(
     CHR        = suppressWarnings(as.integer(as.character(CHROM))), # force numeric chr
     BP         = suppressWarnings(as.numeric(POS)),
     log10_conj = -log10(conj_fdr)
   ) %>%
+  left_join(conjFDR.clump.loci, by = c("SNP" = "LEAD_SNP", "CHR")) %>%
   arrange(CHR, BP)
 
-chr_info <- df %>%
+chr_info <- manhattan_df %>%
   group_by(CHR) %>%
   summarise(chr_len = max(BP, na.rm = TRUE), .groups = "drop") %>%
   arrange(CHR) %>%
@@ -41,32 +47,32 @@ chr_info <- df %>%
     center  = offset + chr_len / 2
   )
 
-df <- df %>%
+manhattan_df <- manhattan_df %>%
   left_join(dplyr::select(chr_info, CHR, offset), by = "CHR") %>%
   dplyr::mutate(
     cumBP     = BP + offset,
     chrom_col = factor(CHR %% 2),
     is_lead   = SNP %in% conjFDR.clump.lead$LEAD_SNP,
-    is_colocalised = SNP %in% genes$RSID
+    is_colocalised = SNP %in% genes$LEAD_SNP
   )
 
 cons <- MDD_MCP_res %>%
   transmute(SNP, consistent = sign(BETA1) == sign(BETA2))
 
-lead_df_same <- df %>% filter(is_lead, sign(BETA1) == sign(BETA2))
-lead_df_opp  <- df %>% filter(is_lead, sign(BETA1) != sign(BETA2))
+lead_df_same <- manhattan_df %>% filter(is_lead, sign(BETA1) == sign(BETA2))
+lead_df_opp  <- manhattan_df %>% filter(is_lead, sign(BETA1) != sign(BETA2))
 
-lead_df_colocalised <- df %>% filter(is_colocalised)
+lead_df_colocalised <- manhattan_df %>% filter(is_colocalised)
 
 axis_df <- chr_info
 
-df_plot <- df
+df_plot <- manhattan_df
 lead_df_same_plot <- lead_df_same
 
-labels_df <- df %>%
+labels_df <- manhattan_df %>%
   filter(is_colocalised) %>%              
-  left_join(genes %>% dplyr::select(LEAD_BP, Symbol),
-            by = c("SNP" = "RSID")) %>%
+  left_join(genes %>% dplyr::select("Min pos", "Max pos", Symbol),
+            by = c("MinBP" = "Min pos", "MaxBP" = "Max pos")) %>%
   separate_rows(Symbol, sep = ";") %>%
   mutate(label_gene = Symbol) %>%
   group_by(SNP) %>%
