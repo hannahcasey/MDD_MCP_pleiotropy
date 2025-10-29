@@ -8,6 +8,7 @@ library(data.table)
 library(biomaRt)
 library(tidyr)
 
+
 # Load credible sets ----
 cs <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", header = T, check.names = F)
 cs_annotated <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant_annotated.csv", header = T, check.names = F)
