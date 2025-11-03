@@ -17,12 +17,14 @@ MDD_GWAS <- fread(file, sep = "\t")
 MDD_MCP_res <- left_join(MDD_MCP_res, dplyr::select(MDD_GWAS, ID, CHROM, POS), by = c("SNP" = "ID"))
 
 # Load genes
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/V2G/loci_annotated_in_text.csv", header = T, check.names = F)
+genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/L2G/loci_in_text.csv", header = T, check.names = F)
 
 genes <- left_join(genes, conjFDR.clump.loci, by = c("Min pos" = "MinBP",   "Max pos" = "MaxBP"))
 
+names(genes)[is.na(names(genes)) | names(genes) == ""] <- paste0("unnamed_", seq_len(sum(is.na(names(genes)) | names(genes) == "")))
+
 gene_list <- genes %>%
-  mutate(v2g_list = strsplit(Symbol, ";", fixed = TRUE)) %>%
+  dplyr::mutate(v2g_list = strsplit(Symbol, ";", fixed = TRUE)) %>%
   pull(v2g_list) %>%
   unlist(use.names = FALSE) %>%
   unique()
@@ -82,6 +84,8 @@ labels_df <- manhattan_df %>%
     label = paste(unique(label_gene), collapse = ", "),
     .groups = "drop"
   )
+
+labels_df$label[labels_df$label == "NA"] <- ""
 
 manhattan_p <- ggplot(df_plot, aes(x = cumBP, y = log10_conj)) +
   geom_point(aes(color = chrom_col), size = 0.5, alpha = 0.6, show.legend = FALSE) +

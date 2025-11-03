@@ -254,12 +254,13 @@ FUMA_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conj
 
 out_long <- out_long %>%
   left_join(FUMA_loci, by = c("Lead_SNP" = "LEAD_SNP")) %>%
-  dplyr::select(CHR, MinBP, MaxBP, Lead_SNP, LEAD_BP, 
+  dplyr::select(locusnum, CHR, MinBP, MaxBP, Lead_SNP, LEAD_BP, 
          coloc_method, 
          MDD_CS_size, MDD_CS_snps, top_MDD_snp,
          MCP_CS_size, MCP_CS_snps, top_MCP_snp,
          PP4) %>%
-  dplyr::rename(Chromosome = CHR,
+  dplyr::rename(`Locus number conjFDR` = locusnum,
+                Chromosome = CHR,
                 `Min pos` = MinBP,
                 `Max pos` = MaxBP,
                 `Lead SNP` = Lead_SNP,

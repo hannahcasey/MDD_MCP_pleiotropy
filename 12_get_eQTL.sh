@@ -8,8 +8,6 @@ for c in $chromosomes; do
     summary_statistics/eQTL/brain/full/
 done
 
-tail -n +2 ../output/V2G/v2g_long.csv | cut -d',' -f3 | grep -vi '^NA$' | grep -v '^$' | sort -u > genes.txt
-
 typeset -a GENES
 GENES=("${(@f)$(< genes.txt)}")
 

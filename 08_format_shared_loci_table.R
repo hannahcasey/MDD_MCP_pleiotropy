@@ -19,13 +19,14 @@ leads_by_locus <- tapply(names(lead_to_locus), lead_to_locus, function(x) sort(u
 ## Make loci table
 loci_table <- FUMA_loci %>%
   dplyr::select(locusnum, CHR, MinBP, MaxBP, LEAD_SNP) %>%
-  dplyr::rename(Chromosome = CHR,
+  dplyr::rename(`Locus number conjFDR` = locusnum,
+                Chromosome = CHR,
                 `Min pos` = MinBP,
                 `Max pos` = MaxBP,
                 `Lead SNP` = LEAD_SNP)
 
 loci_table$`Additional Lead SNP(s)` <- vapply(seq_len(nrow(loci_table)), function(i) {
-  locus  <- loci_table$locusnum[i]
+  locus  <- loci_table$`Locus number conjFDR`[i]
   this_lead <- loci_table[["Lead SNP"]][i]
   vec <- leads_by_locus[[as.character(locus)]]
   if (is.null(vec)) return(NA_character_)
@@ -48,15 +49,15 @@ loci_table <- loci_table %>%
          `conj FDR` = FDR)
 
 out <- loci_table %>%
-  left_join(MDD_GWAS, by = c("Lead SNP" = "ID")) %>%   # bring in GWAS cols
+  left_join(MDD_GWAS, by = c("Lead SNP" = "ID")) %>%
   mutate(
     A1 = EA,
     A2 = NEA,
-    direction = sign(BETA) == sign(`MDD beta`)         # TRUE if same effect direction
   ) %>%
+  mutate(across(c(`MDD beta`, `MCP beta`), ~ round(.x, 3))) %>%
   dplyr::select(
-    "Chromosome", "Min pos", "Max pos", "Lead SNP", "Additional Lead SNP(s)",  # locus info
-    "pos", "A1", "A2", "MDD beta", "MDD p", "MCP beta", "MCP p", "conj FDR",   # lead info
+    `Locus number conjFDR`, Chromosome, `Min pos`, `Max pos`, `Lead SNP`, `Additional Lead SNP(s)`,  # locus info
+    pos, A1, A2, `MDD beta`, `MDD p`, `MCP beta`, `MCP p`, `conj FDR`,   # lead info
   )
 
 write.csv(out, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/loci_formatted.csv", row.names = F)

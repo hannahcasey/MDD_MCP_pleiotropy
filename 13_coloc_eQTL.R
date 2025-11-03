@@ -79,16 +79,20 @@ lift_eqtl_df <- function(df, chain = ch, id_col = "variant_id") {
 eqtl_list <- map(eqtl_list, lift_eqtl_df)
 
 ## Genes ----
-genes <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/genes.txt", header = F)
-  
+genes <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/genes.cvs", header = T, sep = " ")
+
+genes_ensembl <- sort(unique(unlist(strsplit(genes$ensembl_gene_id, ", ", fixed = TRUE))))
+
 mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", GRCh = 37)
 gene_coords <- getBM(
   attributes = c("ensembl_gene_id", "hgnc_symbol", "chromosome_name",
                  "start_position", "end_position", "strand"),
   filters = "ensembl_gene_id",
-  values = genes$V1,
+  values = genes_ensembl,
   mart = mart
 )
+
+gene_coords <- left_join(gene_coords, genes, by = "ensembl_gene_id")
 
 # LD matrices -----
 LD_matrices <- list()
@@ -100,11 +104,12 @@ LD_DIR <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resour
 for(gene_idx in seq_len(nrow(gene_coords))){
   
   gene_eQTL <- eqtl_list[[gene_coords$ensembl_gene_id[[gene_idx]]]]
+  if(nrow(gene_eQTL) == 0) next
   gene_eQTL <- dplyr::select(gene_eQTL, chr_hg19, pos_hg19)
   gene_eQTL$chr_hg19 <- as.numeric(gsub("chr", "", gene_eQTL$chr_hg19))
   
   gene_chr  <- gene_coords$chromosome_name[gene_idx]
-  gene_name <- gene_coords$hgnc_symbol[gene_idx]
+  gene_name <- gene_coords$SYMBOL[gene_idx]
   start_pos <- gene_coords$start_position[gene_idx] - 500000L
   end_pos   <- gene_coords$end_position[gene_idx] + 500000L
   
@@ -179,10 +184,13 @@ gtex_eur_brain_sample_sizes <- tribble(
 tissue_n_lookup <- setNames(gtex_eur_brain_sample_sizes$N,
                             gtex_eur_brain_sample_sizes$tissue)
 
-for(gene_idx in seq_len(nrow(gene_coords))){
+for(gene_idx in 44:nrow(gene_coords)){
   
-  gene_name <- gene_coords$hgnc_symbol[gene_idx]
+  gene_name <- gene_coords$SYMBOL[gene_idx]
   ensembl_gene_id <- gene_coords$ensembl_gene_id[gene_idx]
+  
+  gene_eQTL <- eqtl_list[[gene_coords$ensembl_gene_id[[gene_idx]]]]
+  if(nrow(gene_eQTL) == 0) next
   
   for(disorder in c("MDD", "MCP")){
     
@@ -201,6 +209,7 @@ for(gene_idx in seq_len(nrow(gene_coords))){
       
       eQTL_GWAS <- eqtl_list[[ensembl_gene_id]]
       eQTL_GWAS <- subset(eQTL_GWAS, tissue == brain_tissue)
+      if (nrow(eQTL_GWAS) == 0) next ## No eQTL when gene not sufficiently expressed
       eQTL_GWAS$chr_hg19 <- as.numeric(gsub("chr", "", eQTL_GWAS$chr_hg19))
       eQTL_GWAS$A1 <- do.call(rbind, strsplit(eQTL_GWAS$variant_id, "_", fixed = TRUE))[, 4]
       eQTL_GWAS <- left_join(eQTL_GWAS, rsid_map, by = c("chr_hg19" = "CHROM", "pos_hg19" = "POS"))
@@ -424,7 +433,7 @@ coloc_full <- if (length(out)) do.call(rbind, out) else
   )
 
 coloc_full <- arrange(coloc_full, Gene, Tissue, Disorder)
-coloc_full$PP4 <- round(coloc_full$PP4, digits = 2)
+coloc_full$PP4 <- round(coloc_full$PP4, digits =3)
   
 coloc_paper <- coloc_full %>%
   transmute(Tissue, Gene, disorder = tolower(Disorder), PP4) %>%
