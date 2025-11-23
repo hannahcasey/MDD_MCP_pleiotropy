@@ -18,6 +18,8 @@ MDD_sumstats <- data.frame(
   INFO= MDD_GWAS$IMPINFO
 )
 
+MDD_sumstats <- MDD_sumstats[!(CHR == 6 & BP >= 25e6 & BP <= 35e6)]
+
 gz <- gzfile("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/MDD_MiXeR.sumstats.gz", "wt")
 write.table(MDD_sumstats, gz, sep = "\t", quote = FALSE, row.names = FALSE)
 close(gz)
@@ -38,6 +40,8 @@ MCP_sumstats <- data.frame(
   P   = MCP_GWAS$P,
   INFO= MCP_GWAS$INFO
 )
+
+MCP_sumstats <- MCP_sumstats[!(CHR == 6 & BP >= 25e6 & BP <= 35e6)]
 
 gz <- gzfile("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/MCP_MiXeR.sumstats.gz", "wt")
 write.table(MCP_sumstats, gz, sep = "\t", quote = FALSE, row.names = FALSE)
