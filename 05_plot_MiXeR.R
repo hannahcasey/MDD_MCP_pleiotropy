@@ -36,7 +36,7 @@ dot_panel <- function(data, x, xmin, xmax, xlab, log10_x = FALSE) {
     geom_point(size = 2.4, show.legend = FALSE) +
     geom_errorbarh(aes(xmin = !!sym(xmin), xmax = !!sym(xmax)), height = 0.15) +
     labs(x = xlab, y = NULL) +
-    theme_minimal(base_size = 12) +
+    theme_minimal(base_size = 16) +
     theme(
       legend.position = "none",
       panel.grid.major.y = element_blank(),
@@ -120,7 +120,7 @@ p_rg <- ggplot(df_rg, aes(y = " ", x = mean)) +
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 0.4) +
   scale_x_continuous(limits = c(-1, 1), breaks = seq(-1, 1, 0.2)) +
   labs(x = expression("Genetic correlation ("*r[g]*")"), y = NULL) +
-  theme_minimal(base_size = 12) +
+  theme_minimal(base_size = 16) +
   theme(
     axis.text.y  = element_blank(),
     axis.ticks.y = element_blank(),
@@ -142,7 +142,7 @@ p_conc <- ggplot(df_conc, aes(y = " ", x = mean)) +
   geom_vline(xintercept = 0.5, linetype = "dotted", linewidth = 0.4) +
   scale_x_continuous(limits = c(0, 1), labels = percent_format(accuracy = 1)) +
   labs(x = "Concordance within shared variants (%)", y = NULL) +
-  theme_minimal(base_size = 12) +
+  theme_minimal(base_size = 16) +
   theme(
     axis.text.y  = element_blank(),
     axis.ticks.y = element_blank(),
@@ -157,17 +157,17 @@ C_panel <- patchwork::wrap_plots(p_rg / p_conc)
 A_tagged <- cowplot::ggdraw(A_panel) +
   cowplot::draw_label("A", x = 0.01, y = 0.99,
                       hjust = 0, vjust = 1,
-                      fontface = "bold", size = 14)
+                      fontface = "bold", size = 16)
 
 B_tagged <- cowplot::ggdraw(B_panel) +
   cowplot::draw_label("B", x = 0.01, y = 0.99,
                       hjust = 0, vjust = 1,
-                      fontface = "bold", size = 14)
+                      fontface = "bold", size = 16)
 
 C_tagged <- cowplot::ggdraw(C_panel) +
   cowplot::draw_label("C", x = 0.01, y = 0.99,
                       hjust = 0, vjust = 1,
-                      fontface = "bold", size = 14)
+                      fontface = "bold", size = 16)
 
 pad <- function(p, t=6, r=6, b=6, l=6) p + theme(plot.margin = margin(t, r, b, l))
 A_pad <- pad(A_tagged, t = 8, r = 12, b = 8, l = 8)
