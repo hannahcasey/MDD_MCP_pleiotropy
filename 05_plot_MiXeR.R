@@ -140,7 +140,7 @@ p_conc <- ggplot(df_conc, aes(y = " ", x = mean)) +
   geom_col(width = 0.45, fill = "#92ea8b") +
   geom_errorbarh(aes(xmin = xmin, xmax = xmax), height = 0.18, linewidth = 0.8) +
   geom_vline(xintercept = 0.5, linetype = "dotted", linewidth = 0.4) +
-  scale_x_continuous(limits = c(0, 1), labels = percent_format(accuracy = 1)) +
+  scale_x_continuous(limits = c(0, 1), labels = percent_format(accuracy = 1, suffix = "")) +
   labs(x = "Concordance within shared variants (%)", y = NULL) +
   theme_minimal(base_size = 16) +
   theme(
