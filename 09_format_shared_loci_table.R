@@ -3,14 +3,14 @@ library(data.table)
 library(purrr)
 
 # Load conjFDR results
-MDD_MCP <- readRDS("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/MDD_MCP_AnalysisObject.rds")
+MDD_MCP <- readRDS("./output/conjFDR/MDD_MCP_AnalysisObject.rds")
 MDD_MCP_res <- MDD_MCP$get_trait_results()
-FUMA_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", sep = "\t")
-FUMA_lead <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.lead.csv", sep = "\t")
+FUMA_loci <- read.csv("./output/conjFDR/conjFDR.clump.loci.csv", sep = "\t")
+FUMA_lead <- read.csv("./output/conjFDR/conjFDR.clump.lead.csv", sep = "\t")
 
 ## Load GWAS
-MDD_GWAS <- fread("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv", sep = "\t")
-MCP_GWAS <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/ChronicPain.stats", header = T)
+MDD_GWAS <- fread("./resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv", sep = "\t")
+MCP_GWAS <- read.table("./resources/summary_statistics/MCP/ChronicPain.stats", header = T)
 
 ## Map leads to locus
 lead_to_locus <- with(FUMA_lead, setNames(locusnum, LEAD_SNP))
@@ -60,5 +60,5 @@ out <- loci_table %>%
     pos, A1, A2, `MDD beta`, `MDD p`, `MCP beta`, `MCP p`, `conj FDR`,   # lead info
   )
 
-write.csv(out, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/loci_formatted.csv", row.names = F)
+write.csv(out, "./output/conjFDR/loci_formatted.csv", row.names = F)
   

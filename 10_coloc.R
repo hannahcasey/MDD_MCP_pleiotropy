@@ -5,30 +5,30 @@ library(dplyr)
 
 # Load in data ----
 ## MDD ----
-file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
+file <- "./resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
 MDD_GWAS <- fread(file, sep = "\t")
 MDD_GWAS$EAF <- ((MDD_GWAS$FCAS * MDD_GWAS$NCAS) + (MDD_GWAS$FCON * MDD_GWAS$NCON)) / (MDD_GWAS$NCAS + MDD_GWAS$NCON)
 MDD_n <- 1639572
 MDD_s <- 357636 /	(357636 + 1281936)
 
 ## MCP ----
-MCP_GWAS <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/ChronicPain.stats", header = T)
+MCP_GWAS <- read.table("./resources/summary_statistics/MCP/ChronicPain.stats", header = T)
 setDT(MCP_GWAS)
 MCP_n <- 387649
 
 ## Share Loci ----
-FUMA_loci <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", header = T)
+FUMA_loci <- read.table("./output/conjFDR/conjFDR.clump.loci.csv", header = T)
 
 ## 1000g BIM file ----
-BIM <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/1000g/EUR.bim")
+BIM <- read.table("./resources/1000g/EUR.bim")
 setDT(BIM)
 
 # LD matrices -----
 LD_matrices <- list()
 
-PLINK <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/plink_mac_20250615/plink"
-REF_PREFIX <- "/Users/hannahcasey/Desktop/PhD/projects/UKB_chronic_pain_depressive_symptoms/resources/1000g/EUR"
-LD_DIR <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc"
+PLINK <- "./resources/plink_mac_20250615/plink"
+REF_PREFIX <- "./resources/1000g/EUR"
+LD_DIR <- "./resources/LD/coloc"
 
 for(loci_idx in seq_len(nrow(FUMA_loci))){
   
@@ -55,7 +55,7 @@ for(loci_idx in seq_len(nrow(FUMA_loci))){
     "--extract", shQuote(snplist_file),
     "--r square gz",
     "--write-snplist",
-    "--a1-allele /Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/1000g/ref_alleles.txt 2 1",
+    "--a1-allele ./resources/1000g/ref_alleles.txt 2 1",
     "--out", shQuote(out_prefix)
   )
   
@@ -68,8 +68,8 @@ coloc_results <- list()
 for(loci_idx in seq_len(nrow(FUMA_loci))){
   
   SNP_rsid <- FUMA_loci$LEAD_SNP[loci_idx]
-  R    <- as.matrix(fread(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc/", SNP_rsid, ".ld.gz"), header = FALSE))
-  snps <- readLines(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/coloc/", SNP_rsid, ".snplist"))
+  R    <- as.matrix(fread(paste0("./resources/LD/coloc/", SNP_rsid, ".ld.gz"), header = FALSE))
+  snps <- readLines(paste0("./resources/LD/coloc/", SNP_rsid, ".snplist"))
   if(length(snps) < 2) next
   rownames(R) <- colnames(R) <- snps
 
@@ -168,7 +168,7 @@ for(loci_idx in seq_len(nrow(FUMA_loci))){
 }
 
 # Save outputs ----
-saveRDS(coloc_results, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cross_trait.rds")
+saveRDS(coloc_results, "./output/coloc/cross_trait.rds")
 
 # Format results ----
 pph4_from_summary <- function(s) {
@@ -250,7 +250,7 @@ out_long <- if (length(out)) do.call(rbind, out) else
   )
 
 
-FUMA_loci <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", sep = "\t")
+FUMA_loci <- read.csv("./output/conjFDR/conjFDR.clump.loci.csv", sep = "\t")
 
 out_long <- out_long %>%
   left_join(FUMA_loci, by = c("Lead_SNP" = "LEAD_SNP")) %>%
@@ -280,5 +280,5 @@ out_short <- subset(out_long, PP4 > 0.80)
 out_short <- out_short %>%
   distinct(across(all_of(c("Top MCP SNP", "Top MDD SNP", "MDD credible set SNPs", "MCP credible set SNPs"))), .keep_all = TRUE)
 
-write.csv(out_long, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait.csv", row.names = F)
-write.csv(out_short, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", row.names = F)
+write.csv(out_long, "./output/coloc/cs_cross_trait.csv", row.names = F)
+write.csv(out_short, "./output/coloc/cs_cross_trait_significant.csv", row.names = F)

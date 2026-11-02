@@ -11,7 +11,7 @@ library(biomaRt)
 
 ## Load data ----
 ### Cross-trait coloc results ----
-cs_cross_trait_significant <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_cross_trait_significant.csv", header = T, check.names = F)
+cs_cross_trait_significant <- read.csv("./output/coloc/cs_cross_trait_significant.csv", header = T, check.names = F)
 
 ## Get locus bands
 ses <- browserSession("UCSC"); genome(ses) <- "hg19"
@@ -211,7 +211,7 @@ genes <- tibble(SYMBOL = genes_hgnc) %>%
             by = c("SYMBOL" = "hgnc_symbol"))
 
 
-write.csv(loci_in_text, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/L2G/loci_in_text.csv")
-write.csv(L2G_long, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/L2G/L2G_long.csv")
-write.csv(genes, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/genes.csv")
-write.table(genes$ensembl_gene_id, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/gene_list.txt", row.names = F, col.names = T, quote = F)
+write.csv(loci_in_text, "./output/L2G/loci_in_text.csv")
+write.csv(L2G_long, "./output/L2G/L2G_long.csv")
+write.csv(genes, "./resources/genes.csv", row.names = F)
+write.table(genes$ensembl_gene_id, "./resources/gene_list.txt", row.names = F, col.names = T, quote = F)

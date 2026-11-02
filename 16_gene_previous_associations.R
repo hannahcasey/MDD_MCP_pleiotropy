@@ -2,7 +2,7 @@ library(httr)
 library(jsonlite)
 
 # Gene list ----
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/genes.csv", header = T, check.names = F)[2:3]
+genes <- read.csv("./resources/genes.csv", header = T, check.names = F)[2:3]
 
 # Get EFO ID ----
 get_efo <- function(term, n = 5) {

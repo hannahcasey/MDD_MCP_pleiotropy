@@ -7,17 +7,17 @@ library(data.table)
 library(tidyr)
 
 # Load conjFDR results
-MDD_MCP <- readRDS("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/MDD_MCP_AnalysisObject.rds")
+MDD_MCP <- readRDS("./output/conjFDR/MDD_MCP_AnalysisObject.rds")
 MDD_MCP_res <- MDD_MCP$get_trait_results()
-conjFDR.clump.lead <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.lead.csv", header = T)
-conjFDR.clump.loci <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.loci.csv", header = T)
+conjFDR.clump.lead <- read.table("./output/conjFDR/conjFDR.clump.lead.csv", header = T)
+conjFDR.clump.loci <- read.table("./output/conjFDR/conjFDR.clump.loci.csv", header = T)
 
-file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD//pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
+file <- "./resources/summary_statistics/MDD//pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
 MDD_GWAS <- fread(file, sep = "\t")
 MDD_MCP_res <- left_join(MDD_MCP_res, dplyr::select(MDD_GWAS, ID, CHROM, POS), by = c("SNP" = "ID"))
 
 # Load genes
-genes <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/L2G/loci_in_text.csv", header = T, check.names = F)
+genes <- read.csv("./output/L2G/loci_in_text.csv", header = T, check.names = F)
 
 genes <- left_join(genes, conjFDR.clump.loci, by = c("Min pos" = "MinBP",   "Max pos" = "MaxBP"))
 
@@ -134,4 +134,4 @@ manhattan_p <- ggplot(df_plot, aes(x = cumBP, y = log10_conj)) +
   )
 
 
-ggsave("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/manhattan.png", plot = manhattan_p, width = 12, height = 6, dpi = 600)
+ggsave("./output/manhattan.png", plot = manhattan_p, width = 12, height = 6, dpi = 600)

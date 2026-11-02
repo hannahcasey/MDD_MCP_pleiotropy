@@ -1,4 +1,4 @@
-cd /Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/
+cd ./resources/
 
 chromosomes=(1 5 6 13 7 11  15 2 9 4 3 20 10 18) 
 for c in $chromosomes; do

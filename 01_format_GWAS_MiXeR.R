@@ -2,8 +2,7 @@ library(dplyr)
 library(data.table)
 
 # MDD GWAS ----
-file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD//pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
-MDD_GWAS <- fread(file, sep = "\t")
+MDD_GWAS <- fread("./resources/summary_statistics/MDD//pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv", sep = "\t")
 MDD_GWAS$Z <- MDD_GWAS$BETA / MDD_GWAS$SE
 
 MDD_sumstats <- data.frame(
@@ -18,14 +17,15 @@ MDD_sumstats <- data.frame(
   INFO= MDD_GWAS$IMPINFO
 )
 
-MDD_sumstats <- MDD_sumstats[!(CHR == 6 & BP >= 25e6 & BP <= 35e6)]
+MDD_sumstats <- MDD_sumstats %>%
+  filter(!(CHR == 6 & between(BP, 25e6, 35e6)))
 
-gz <- gzfile("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/MDD_MiXeR.sumstats.gz", "wt")
+gz <- gzfile("./resources/summary_statistics/MDD/MDD_MiXeR.sumstats.gz", "wt")
 write.table(MDD_sumstats, gz, sep = "\t", quote = FALSE, row.names = FALSE)
 close(gz)
 
 # MCP GWAS ----
-MCP_GWAS <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/ChronicPain.stats", header = T)
+MCP_GWAS <- read.table("./resources/summary_statistics/MCP/ChronicPain.stats", header = T)
 
 MCP_GWAS$Z <- MCP_GWAS$BETA / MCP_GWAS$SE
 
@@ -41,8 +41,9 @@ MCP_sumstats <- data.frame(
   INFO= MCP_GWAS$INFO
 )
 
-MCP_sumstats <- MCP_sumstats[!(CHR == 6 & BP >= 25e6 & BP <= 35e6)]
+MCP_sumstats <- MCP_sumstats %>%
+  filter(!(CHR == 6 & between(BP, 25e6, 35e6)))
 
-gz <- gzfile("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/MCP_MiXeR.sumstats.gz", "wt")
+gz <- gzfile("./resources/summary_statistics/MCP/MCP_MiXeR.sumstats.gz", "wt")
 write.table(MCP_sumstats, gz, sep = "\t", quote = FALSE, row.names = FALSE)
 close(gz)

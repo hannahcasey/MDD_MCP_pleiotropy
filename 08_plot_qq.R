@@ -2,12 +2,12 @@ library(ggplot2)
 library(data.table)
 library(patchwork)
 # Load GWAS and conjFDR results
-MDD_MCP <- readRDS("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/MDD_MCP_AnalysisObject.rds")
-MCP_GWAS <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/ChronicPain.stats", header = T)
+MDD_MCP <- readRDS("./output/conjFDR/MDD_MCP_AnalysisObject.rds")
+MCP_GWAS <- read.table("./resources/summary_statistics/MCP/ChronicPain.stats", header = T)
 
 MDD_MCP_res <- MDD_MCP$get_trait_results()
-conjFDR.clump.lead <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/conjFDR.clump.lead.csv", header = T)
-file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD//pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
+conjFDR.clump.lead <- read.table("./output/conjFDR/conjFDR.clump.lead.csv", header = T)
+file <- "./resources/summary_statistics/MDD//pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
 MDD_GWAS <- fread(file, sep = "\t")
 
 MDD_MCP_res <- left_join(MDD_MCP_res, select(MDD_GWAS, ID, CHROM, POS), by = c("SNP" = "ID"))
@@ -62,7 +62,7 @@ manhattan_p <- ggplot(df, aes(cumBP, log10_conj)) +
   theme_bw(base_size = 12) +
   theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank())
 
-ggsave("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/manhattan.png", plot = manhattan_p, width = 11, height = 5, dpi = 600)
+ggsave("./output/conjFDR/manhattan.png", plot = manhattan_p, width = 11, height = 5, dpi = 600)
 
 # Q-Q plots ----
 MDD <- data.frame(
@@ -219,4 +219,4 @@ p2 <- ggplot(df_right, aes(expected, observed, colour = stratum)) +
 
 qq_p <- p1 + p2
 
-ggsave("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/conjFDR/qq.png", plot = qq_p, width = 11, height = 6, dpi = 600)
+ggsave("./output/conjFDR/qq.png", plot = qq_p, width = 11, height = 6, dpi = 600)

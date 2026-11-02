@@ -14,23 +14,23 @@ library(tibble)
 
 # Load in data ----
 ## MDD ----
-file <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
+file <- "./resources/summary_statistics/MDD/pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv"
 MDD_GWAS <- fread(file, sep = "\t")
 MDD_GWAS$EAF <- ((MDD_GWAS$FCAS * MDD_GWAS$NCAS) + (MDD_GWAS$FCON * MDD_GWAS$NCON)) / (MDD_GWAS$NCAS + MDD_GWAS$NCON)
 MDD_n <- 1639572
 MDD_s <- 357636 /	(357636 + 1281936)
 
 ## MCP ----
-MCP_GWAS <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/MCP/ChronicPain.stats", header = T)
+MCP_GWAS <- read.table("./resources/summary_statistics/MCP/ChronicPain.stats", header = T)
 setDT(MCP_GWAS)
 MCP_n <- 387649
 
 ## 1000g BIM file ----
-BIM <- read.table("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/1000g/EUR.bim")
+BIM <- read.table("./resources/1000g/EUR.bim")
 setDT(BIM)
 
 ## eQTL ----
-dir <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/summary_statistics/eQTL/brain/by_gene"
+dir <- "./resources/summary_statistics/eQTL/brain/by_gene"
 files <- list.files(
   dir, pattern = "*.csv", full.names = TRUE
 )
@@ -44,7 +44,7 @@ eqtl_list <- set_names(
 
 eqtl_list <- map(eqtl_list, ~ filter(.x, !is.na(slope)))
 
-ch <- import.chain("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/hg38ToHg19.over.chain")
+ch <- import.chain("./resources/hg38ToHg19.over.chain")
 
 lift_eqtl_df <- function(df, chain = ch, id_col = "variant_id") {
   if (nrow(df) == 0) return(df)
@@ -79,7 +79,7 @@ lift_eqtl_df <- function(df, chain = ch, id_col = "variant_id") {
 eqtl_list <- map(eqtl_list, lift_eqtl_df)
 
 ## Genes ----
-genes <- read.csv("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/genes.cvs", header = T, sep = " ")
+genes <- read.csv("./resources/genes.cvs", header = T, sep = " ")
 
 genes_ensembl <- sort(unique(unlist(strsplit(genes$ensembl_gene_id, ", ", fixed = TRUE))))
 
@@ -97,9 +97,9 @@ gene_coords <- left_join(gene_coords, genes, by = "ensembl_gene_id")
 # LD matrices -----
 LD_matrices <- list()
 
-PLINK <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/plink_mac_20250615/plink"
-REF_PREFIX <- "/Users/hannahcasey/Desktop/PhD/projects/UKB_chronic_pain_depressive_symptoms/resources/1000g/EUR"
-LD_DIR <- "/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/"
+PLINK <- "./resources/plink_mac_20250615/plink"
+REF_PREFIX <- "./resources/1000g/EUR"
+LD_DIR <- "./resources/LD/"
 
 for(gene_idx in seq_len(nrow(gene_coords))){
   
@@ -140,7 +140,7 @@ for(gene_idx in seq_len(nrow(gene_coords))){
     "--extract", shQuote(MDD_snplist_file),
     "--r square gz",
     "--write-snplist",
-    "--a1-allele /Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/1000g/ref_alleles.txt 2 1",
+    "--a1-allele ./resources/1000g/ref_alleles.txt 2 1",
     "--out", shQuote(MDD_out_prefix)
   )
   system(cmd)
@@ -152,7 +152,7 @@ for(gene_idx in seq_len(nrow(gene_coords))){
     "--extract", shQuote(MCP_snplist_file),
     "--r square gz",
     "--write-snplist",
-    "--a1-allele /Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/1000g/ref_alleles.txt 2 1",
+    "--a1-allele ./resources/1000g/ref_alleles.txt 2 1",
     "--out", shQuote(MCP_out_prefix)
   )
   system(cmd)
@@ -196,8 +196,8 @@ for(gene_idx in 44:nrow(gene_coords)){
     
     for(brain_tissue in tissue_list){
       
-      R    <- as.matrix(fread(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/eqtl/", gene_name, "_", disorder, ".ld.gz"), header = FALSE))
-      snps <- readLines(paste0("~/Desktop/PhD/projects/MCP_MDD_colocalisation/resources/LD/eqtl/", gene_name, "_", disorder, ".snplist"))
+      R    <- as.matrix(fread(paste0("./resources/LD/eqtl/", gene_name, "_", disorder, ".ld.gz"), header = FALSE))
+      snps <- readLines(paste0("./resources/LD/eqtl/", gene_name, "_", disorder, ".snplist"))
       rownames(R) <- colnames(R) <- snps
       BIM_sub <- BIM[match(snps, BIM$V2), .(SNP = V2, REF = V6, ALT = V5)]
       
@@ -329,7 +329,7 @@ for(gene_idx in 44:nrow(gene_coords)){
 }
 
 # Save outputs ----
-saveRDS(coloc_results, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/eQTL.rds")
+saveRDS(coloc_results, "./output/coloc/eQTL.rds")
 
 # Format results ----
 parse_key <- function(k) {
@@ -444,6 +444,6 @@ coloc_paper <- coloc_full %>%
   dplyr::filter(dplyr::if_any(dplyr::starts_with("PP4"), ~ .x > 0.80)) %>%
   dplyr::arrange(Gene, Tissue)
 
-write.csv(coloc_full, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_eQTL.csv", row.names = F)
-write.csv(coloc_paper, "~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/coloc/cs_eQTL_in_text.csv", row.names = F)
+write.csv(coloc_full, "./output/coloc/cs_eQTL.csv", row.names = F)
+write.csv(coloc_paper, "./output/coloc/cs_eQTL_in_text.csv", row.names = F)
 

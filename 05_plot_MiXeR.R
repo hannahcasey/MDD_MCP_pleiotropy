@@ -10,13 +10,13 @@ library(scales)
 library(cowplot)
 
 # Load MiXeR output ----
-MDD_and_MCP <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/MiXeR/MDD_and_MCP.test.csv", sep = "\t", header = T)
-MDD_vs_MCP <- read.csv("/Users/hannahcasey/Desktop/PhD/projects/MCP_MDD_colocalisation/output/MiXeR/MDD_vs_MCP.csv", sep = "\t", header = T)
+MDD_and_MCP <- read.csv("./output/MiXeR/MDD_and_MCP.test.csv", sep = "\t", header = T)
+MDD_vs_MCP <- read.csv("./output/MiXeR/MDD_vs_MCP.csv", sep = "\t", header = T)
 
 # Univartiate plots
 MDD_and_MCP_plot <- MDD_and_MCP %>%
   mutate(
-    trait = c("Major Depressive Disorder", "Multisite Chronic Pain"),
+    trait = c("MDD", "MCP"),
     poly = `nc.p9..mean.`,
     poly_low = pmax(0, `nc.p9..mean.` - `nc.p9..std.`),
     poly_high =       `nc.p9..mean.` + `nc.p9..std.`,
@@ -33,8 +33,8 @@ MDD_and_MCP_plot$trait
 
 dot_panel <- function(data, x, xmin, xmax, xlab, log10_x = FALSE) {
   p <- ggplot(data, aes(x = !!sym(x), y = trait, color = trait)) +
-    geom_point(size = 2.4, show.legend = FALSE) +
-    geom_errorbarh(aes(xmin = !!sym(xmin), xmax = !!sym(xmax)), height = 0.15) +
+    geom_point(size = 3, show.legend = FALSE) +
+    geom_errorbarh(aes(xmin = !!sym(xmin), xmax = !!sym(xmax)), height = 0.3) +
     labs(x = xlab, y = NULL) +
     theme_minimal(base_size = 16) +
     theme(
@@ -100,7 +100,7 @@ venn_diagram <- plot(
   quantities = list(
     # supply custom text labels in region order: MDD, MCP, overlap
     labels = c(MDD_n_var, MCP_n_var, overlap_n_var),
-    cex    = 1.1,
+    cex    = 1.2,
     font   = 1,
     col    = "black"
   )
@@ -117,15 +117,18 @@ df_rg <- tibble(
 p_rg <- ggplot(df_rg, aes(y = " ", x = mean)) +
   geom_col(width = 0.45, fill = "#92ea8b") +
   geom_errorbarh(aes(xmin = xmin, xmax = xmax), height = 0.18, linewidth = 0.8) +
-  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 0.4) +
-  scale_x_continuous(limits = c(-1, 1), breaks = seq(-1, 1, 0.2)) +
+  geom_vline(xintercept = 0, linetype = "dotted", linewidth = 0.4) +
+  scale_x_continuous(limits = c(-1, 1), breaks = seq(-1, 1, 0.5)) +
   labs(x = expression("Genetic correlation ("*r[g]*")"), y = NULL) +
   theme_minimal(base_size = 16) +
   theme(
     axis.text.y  = element_blank(),
     axis.ticks.y = element_blank(),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor   = element_blank()
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    axis.line.x = element_line(color = 'darkgrey')
   )
 
 
@@ -139,20 +142,46 @@ df_conc <- tibble(
 p_conc <- ggplot(df_conc, aes(y = " ", x = mean)) +
   geom_col(width = 0.45, fill = "#92ea8b") +
   geom_errorbarh(aes(xmin = xmin, xmax = xmax), height = 0.18, linewidth = 0.8) +
-  geom_vline(xintercept = 0.5, linetype = "dotted", linewidth = 0.4) +
+  geom_vline(xintercept = 0, linetype = "dotted", linewidth = 0.4) +
   scale_x_continuous(limits = c(0, 1), labels = percent_format(accuracy = 1, suffix = "")) +
   labs(x = "Concordance within shared variants (%)", y = NULL) +
   theme_minimal(base_size = 16) +
   theme(
     axis.text.y  = element_blank(),
     axis.ticks.y = element_blank(),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor   = element_blank()
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    axis.line.x = element_line(color = 'darkgrey')
   )
 
-A_panel <- patchwork::wrap_plots(p_univariate)
-B_panel <- patchwork::wrap_plots(venn_diagram)
-C_panel <- patchwork::wrap_plots(p_rg / p_conc)
+df_rho <- tibble(
+  mean = row$`rho_beta..mean.`,
+  sd   = row$`rho_beta..std.`,
+  xmin = mean - sd,
+  xmax = mean + sd
+)
+
+p_rho <- ggplot(df_rho, aes(y = " ", x = mean)) +
+  geom_col(width = 0.45, fill = "#92ea8b") +
+  geom_errorbarh(aes(xmin = xmin, xmax = xmax), height = 0.18, linewidth = 0.8) +
+  geom_vline(xintercept = 0, linetype = "dotted", linewidth = 0.4) +
+  labs(x = expression("Effect size correlation within shared variants ("*rho[beta]*")"), y = NULL) +
+  theme_minimal(base_size = 16) +
+  theme(
+    axis.text.y  = element_blank(),
+    axis.ticks.y = element_blank(),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    axis.line.x = element_line(color = 'darkgrey')
+  )
+
+
+A_panel <- patchwork::wrap_plots(venn_diagram)
+B_panel <- patchwork::wrap_plots(p_rg / p_conc / p_rho)
 
 A_tagged <- cowplot::ggdraw(A_panel) +
   cowplot::draw_label("A", x = 0.01, y = 0.99,
@@ -164,22 +193,14 @@ B_tagged <- cowplot::ggdraw(B_panel) +
                       hjust = 0, vjust = 1,
                       fontface = "bold", size = 16)
 
-C_tagged <- cowplot::ggdraw(C_panel) +
-  cowplot::draw_label("C", x = 0.01, y = 0.99,
-                      hjust = 0, vjust = 1,
-                      fontface = "bold", size = 16)
-
 pad <- function(p, t=6, r=6, b=6, l=6) p + theme(plot.margin = margin(t, r, b, l))
-A_pad <- pad(A_tagged, t = 8, r = 12, b = 8, l = 8)
-B_pad <- pad(B_tagged, t = 8, r = 8,  b = 6, l = 12)
-C_pad <- pad(C_tagged, t = 8, r = 8,  b = 8, l = 12)
+A_pad <- pad(A_tagged, t = 8, r = 8, b = 6, l = 12)
+B_pad <- pad(B_tagged, t = 8, r = 8, b = 8, l = 12)
 
-final_plot <- (A_pad | (B_pad / C_pad + plot_layout(heights = c(1,0.7)))) +
-  plot_layout(widths = c(1.2, 1)) +
+final_plot <- (A_pad | B_pad) +
+  plot_layout(widths = c(1, 1), heights = c(1, 1)) +
   plot_annotation(theme = theme(plot.margin = margin(12, 12, 12, 12)))
-
 
 final_plot
 
-ggsave("~/Desktop/PhD/projects/MCP_MDD_colocalisation/output/MiXeR/results.png", plot = final_plot, width = 12, height = 7, dpi = 600)
-
+ggsave("./output/MiXeR/results.png", plot = final_plot, width = 10, height = 5, dpi = 600)
