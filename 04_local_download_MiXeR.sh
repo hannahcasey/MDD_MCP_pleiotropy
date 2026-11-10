@@ -1,1 +1,0 @@
-scp s2093301@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/s2093301/coloc/resources/MIXER/{MDD_and_MCP.test.power.svg,MDD_vs_MCP.svg,MDD_and_MCP.fit.csv,MDD_and_MCP.test.csv,MDD_and_MCP.test.power.csv,MDD_vs_MCP.csv} ./output/MiXeR

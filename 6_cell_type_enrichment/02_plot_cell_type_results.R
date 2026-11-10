@@ -6,11 +6,10 @@ library(ggplot2)
 
 # Get MCP results
 MCP_files <- list.files(
-  path = "./output/cell_type_enrichment/FUMA_celltype_MCP/",
-  pattern = "Siletti.*\\.gsa\\.out$",
+  path = "./output/cell_type_enrichment/FUMA_celltype_MCP_Siletti/",
+  pattern = ".gsa\\.out$",
   full.names = TRUE
 )
-MCP_files <- MCP_files[!grepl("Tadross", MCP_files, ignore.case = TRUE)]
 
 MCP_cell_type_res <- map_dfr(MCP_files, function(file) {
   read.table(file, comment = "#", header = T) %>%
@@ -19,11 +18,10 @@ MCP_cell_type_res <- map_dfr(MCP_files, function(file) {
 
 # Get MDD results
 MDD_files <- list.files(
-  path = "./output/cell_type_enrichment/FUMA_celltype_MDD/",
-  pattern = "Siletti.*\\.gsa\\.out$",
+  path = "./output/cell_type_enrichment/FUMA_celltype_MDD_Siletti//",
+  pattern = ".gsa\\.out$",
   full.names = TRUE
 )
-MDD_files <- MDD_files[!grepl("Tadross", MDD_files, ignore.case = TRUE)]
 
 MDD_cell_type_res <- map_dfr(MDD_files, function(file) {
   read.table(file, comment = "#", header = T) %>%
@@ -75,7 +73,7 @@ results_save <- cell_type_res_nominal %>%
     across(where(is.numeric), ~ round(.x, 3))
   )
 
-write.csv(results_save, "./output/cell_type_enrichment/Siletti_nominal.csv", row.names = F)
+write.csv(results_save, "./output/cell_type_enrichment/Siletti_nominal_new.csv", row.names = F)
 
 # Plot findings
 
