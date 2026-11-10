@@ -27,28 +27,6 @@ mdd <- MDD_GWAS %>%
     POS_MDD = POS
   )
 
-mdd_EHR <- MDD_EHR_GWAS %>%
-  transmute(
-    SNP = ID,                
-    EA_MDD = toupper(EA),   
-    NEA_MDD = toupper(NEA),  
-    BETA_MDD = BETA,
-    P_MDD = PVAL,
-    CHR_MDD = CHROM,
-    POS_MDD = POS
-  )
-
-mdd_quest <- MDD_quest_GWAS %>%
-  transmute(
-    SNP = ID,                
-    EA_MDD = toupper(EA),   
-    NEA_MDD = toupper(NEA),  
-    BETA_MDD = BETA,
-    P_MDD = PVAL,
-    CHR_MDD = CHROM,
-    POS_MDD = POS
-  )
-
 mcp <- MCP_GWAS %>%
   transmute(
     SNP,
@@ -61,15 +39,11 @@ mcp <- MCP_GWAS %>%
   )
 
 merged_MCP_MDD <- inner_join(mcp, mdd, by = "SNP")
-merged_MCP_MDD_EHR <- inner_join(mcp, mdd_EHR, by = "SNP")
-merged_MCP_MDD_quest <- inner_join(mcp, mdd_quest, by = "SNP")
 
 comp <- function(a) chartr("ATCG", "TAGC", a)
 is_pal <- function(a, b) (a=="A"&b=="T")|(a=="T"&b=="A")|(a=="C"&b=="G")|(a=="G"&b=="C")
 
 merged_MCP_MDD <- merged_MCP_MDD %>% filter(!is_pal(A1_MCP, A2_MCP))
-merged_MCP_MDD_EHR <- merged_MCP_MDD_EHR %>% filter(!is_pal(A1_MCP, A2_MCP))
-merged_MCP_MDD_quest <- merged_MCP_MDD_quest %>% filter(!is_pal(A1_MCP, A2_MCP))
 
 harmonise_datasets <- function(merged_df) {
   
@@ -93,18 +67,8 @@ harmonise_datasets <- function(merged_df) {
 }
 
 harmonised_MCP_MDD <- harmonise_datasets(merged_MCP_MDD)
-harmonised_MCP_MDD_EHR <- harmonise_datasets(merged_MCP_MDD_EHR)
-harmonised_MCP_MDD_quest <- harmonise_datasets(merged_MCP_MDD_quest)
 
 harmonised_MCP_MDD <- harmonised_MCP_MDD %>%
-  filter(!(CHR_MDD == 6 & between(POS_MDD, 25e6, 35e6))) %>%
-  filter(!(CHR_MDD == 8 & between(POS_MDD, 7.2e6, 12.5e6)))
-
-harmonised_MCP_MDD_EHR <- harmonised_MCP_MDD_EHR %>%
-  filter(!(CHR_MDD == 6 & between(POS_MDD, 25e6, 35e6))) %>%
-  filter(!(CHR_MDD == 8 & between(POS_MDD, 7.2e6, 12.5e6)))
-
-harmonised_MCP_MDD_quest <- harmonised_MCP_MDD_quest %>%
   filter(!(CHR_MDD == 6 & between(POS_MDD, 25e6, 35e6))) %>%
   filter(!(CHR_MDD == 8 & between(POS_MDD, 7.2e6, 12.5e6)))
 
@@ -156,47 +120,4 @@ sumstats <- MDD_MCP_res %>%
             A1, A2,
             FDR = conj_fdr) 
 fwrite(sumstats, "./resources/python_convert/conjFDR_MCP_MDD_for_clump.csv", sep = "\t", quote = FALSE)
-
-## MCP x MDD (EHR, EUR) ----
-MCP <- data.frame(
-  SNP = harmonised_MCP_MDD_EHR$SNP,
-  BETA = harmonised_MCP_MDD_EHR$BETA_MCP_HARM,
-  PVAL   = harmonised_MCP_MDD_EHR$P_MCP
-)
-
-MDD <- data.frame(
-  SNP = harmonised_MCP_MDD_EHR$SNP,
-  BETA = harmonised_MCP_MDD_EHR$BETA_MDD,
-  PVAL   = harmonised_MCP_MDD_EHR$P_MDD
-)
-
-setDT(MCP); setDT(MDD)
-MDD_MCP <- cfdr_pleio$new()
-
-MDD_MCP$init_data(trait1 = MDD,
-                  trait2 = MCP, 
-                  trait_names = c("MDD", "MCP"),
-                  refdat = refdata_location(REF_DIR), 
-                  local_refdat_path = REF_DIR,
-                  verbose = T)
-
-MDD_MCP$initialize_pruning_index(n_iter = 50, seed = 151097, verbose = T, force=TRUE)
-
-MDD_MCP$calculate_cond_fdr(fdr_trait = 1, verbose = T)
-MDD_MCP$calculate_cond_fdr(fdr_trait = 2, verbose = T)
-
-MDD_MCP_res <- MDD_MCP$get_trait_results()
-
-## Save results
-saveRDS(MDD_MCP, file = paste("./output/conjFDR/MCP_MDD_EHR_AnalysisObject.rds", sep="/"))
-write.table(MDD_MCP_res, "./output/conjFDR/MCP_MDD_EHR_res.txt", row.names = F, quote = F)
-
-## Format for sumstats.py
-sumstats <- MDD_MCP_res %>%
-  inner_join(bim_ref %>% select(SNP, A1, A2, CHR, BP), by = "SNP") %>%
-  transmute(SNP, CHR = as.integer(CHR), BP = as.integer(BP),
-            A1, A2,
-            FDR = conj_fdr) 
-fwrite(sumstats, "./resources/python_convert/conjFDR_MCP_MDD_EHR_for_clump.csv", sep = "\t", quote = FALSE)
-
  
